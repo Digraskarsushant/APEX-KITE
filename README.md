@@ -64,7 +64,7 @@ Ensure you have **Python 3.10+** and **Node.js 18+** installed on your system.
    ```
    *The server will boot, seed a default sandbox profile, fetch real-time Yahoo Finance index histories, and listen on [http://localhost:8000](http://localhost:8000).*
 
-### 2. Frontend Setup (React Native Expo Web)
+### 2. Frontend Setup (Web, Android & iOS)
 
 1. Open a new terminal and navigate to the `frontend/` directory:
    ```bash
@@ -74,11 +74,28 @@ Ensure you have **Python 3.10+** and **Node.js 18+** installed on your system.
    ```bash
    npm install
    ```
-3. Start the application on the web platform:
-   ```bash
-   npm run web
-   ```
-   *This starts the Expo web interface, opening the trading terminal directly in your web browser at [http://localhost:8081](http://localhost:8081).*
+3. Run the application:
+   * **To run in your Web Browser**:
+     ```bash
+     npm run web
+     ```
+     *This boots the web bundle and opens the terminal dashboard in your browser at [http://localhost:8081](http://localhost:8081).*
+   * **To run on Mobile (Android & iOS) via Expo Go**:
+     1. Install the free **Expo Go** app on your physical mobile device from the Google Play Store or Apple App Store.
+     2. Ensure your phone and development computer are connected to the **same Wi-Fi network**.
+     3. Ensure your computer's Wi-Fi network profile is set to **Private** (to allow incoming port `8081` and `8000` handshakes).
+     4. Start the Expo Metro Bundler:
+        ```bash
+        npx expo start
+        ```
+     5. Scan the QR code displayed in your terminal window:
+        * **Android**: Open the **Expo Go** app and tap "Scan QR Code".
+        * **iOS**: Open the native **Camera** app, scan the QR code, and tap the link to open it in Expo Go.
+     6. *Troubleshooting*: If your local Wi-Fi router blocks standard peer connections, run the bundler in tunnel mode:
+        ```bash
+        npx expo start --tunnel
+        ```
+
 
 ---
 

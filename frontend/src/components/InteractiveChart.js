@@ -5,8 +5,8 @@ import { apiService } from '../utils/api';
 import { useApp } from '../context/AppContext';
 
 export default function InteractiveChart({ candles = [], activeInterval = '1m', onIntervalChange }) {
-  const { theme } = useApp();
-  const [chartType, setChartType] = useState('candle'); // 'candle' | 'line'
+  const { theme, settings } = useApp();
+  const [chartType, setChartType] = useState(settings?.defaultChartMode || 'candle'); // 'candle' | 'line'
   const [showEMA9, setShowEMA9] = useState(true);
   const [showEMA21, setShowEMA21] = useState(false);
   const [showBB, setShowBB] = useState(false);
@@ -20,6 +20,13 @@ export default function InteractiveChart({ candles = [], activeInterval = '1m', 
   const [panOffset, setPanOffset] = useState(0);
   const [isMarketLive, setIsMarketLive] = useState(true);
   const [togglingLive, setTogglingLive] = useState(false);
+
+  // Synchronize with global settings layout mode
+  useEffect(() => {
+    if (settings?.defaultChartMode) {
+      setChartType(settings.defaultChartMode);
+    }
+  }, [settings?.defaultChartMode]);
 
   // Synchronize simulator status on mount
   useEffect(() => {

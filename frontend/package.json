@@ -1,0 +1,26 @@
+{
+  "name": "antigravity-stock-terminal",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "dependencies": {
+    "expo": "~51.0.0",
+    "@expo/metro-runtime": "~3.2.3",
+    "expo-status-bar": "~1.12.1",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "react-native": "0.74.1",
+    "react-native-web": "~0.19.10",
+    "react-native-svg": "15.2.0",
+    "lucide-react-native": "^0.379.0",
+    "axios": "^1.6.8"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.20.0"
+  },
+  "private": true
+}

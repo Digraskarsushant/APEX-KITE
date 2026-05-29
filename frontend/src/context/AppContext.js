@@ -315,8 +315,11 @@ export const AppProvider = ({ children }) => {
     try {
       const profile = await apiService.addFunds(amount, userId);
       setUserProfile(profile);
+      return { success: true };
     } catch (e) {
       console.error('Failed to add funds:', e);
+      const detail = e.response?.data?.detail || 'Failed to deposit virtual cash. Verify your connection.';
+      return { success: false, error: detail };
     }
   };
 

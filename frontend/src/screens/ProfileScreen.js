@@ -12,11 +12,23 @@ export default function ProfileScreen() {
   const [stripeVisible, setStripeVisible] = useState(false);
 
   const handleAddFunds = async () => {
-    const val = parseFloat(fundsAmount) || 0;
-    if (val <= 0) return;
+    // Strip commas, currency symbols, and spaces from input
+    const cleanAmount = fundsAmount.replace(/[^0-9.]/g, '');
+    const val = parseFloat(cleanAmount) || 0;
+    if (val <= 0) {
+      alert("Please enter a valid positive cash amount.");
+      return;
+    }
     setAddingFunds(true);
-    await addVirtualCash(val);
+    const res = await addVirtualCash(val);
     setAddingFunds(false);
+
+    if (res && !res.success) {
+      alert(res.error);
+    } else {
+      setFundsAmount('');
+      alert(`Successfully deposited ₹${val.toLocaleString()} into your virtual margin account!`);
+    }
   };
 
   const handleReset = async () => {

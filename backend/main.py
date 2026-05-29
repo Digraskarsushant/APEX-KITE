@@ -673,3 +673,21 @@ async def websocket_endpoint(websocket: WebSocket):
         if websocket in active_websocket_connections:
             active_websocket_connections.remove(websocket)
         print(f"WebSocket error: {e}")
+
+
+# --- Static Files Mounting for Unified Frontend/Backend Serving ---
+from fastapi.staticfiles import StaticFiles
+import os
+
+# Mount the compiled static React Native Web bundle
+frontend_dist_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../frontend/dist"))
+if os.path.exists(frontend_dist_path):
+    app.mount("/", StaticFiles(directory=frontend_dist_path, html=True), name="frontend")
+    print(f"Successfully mounted production frontend assets from: {frontend_dist_path}")
+else:
+    # Also support docker container layout where frontend/dist is placed directly under /app/dist or similar
+    docker_dist_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "dist"))
+    if os.path.exists(docker_dist_path):
+        app.mount("/", StaticFiles(directory=docker_dist_path, html=True), name="frontend")
+        print(f"Successfully mounted production frontend assets from: {docker_dist_path}")
+

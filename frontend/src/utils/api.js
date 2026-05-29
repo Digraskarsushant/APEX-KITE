@@ -5,9 +5,12 @@ import { Platform } from 'react-native';
 const getBackendUrls = () => {
   if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location) {
     const hostname = window.location.hostname;
+    const port = window.location.port ? `:${window.location.port}` : '';
+    const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
     return {
-      api: `http://${hostname}:8000`,
-      ws: `ws://${hostname}:8000`
+      api: `${protocol}://${hostname}${port}`,
+      ws: `${wsProtocol}://${hostname}${port}`
     };
   }
   // Native mobile device connected to the same Wi-Fi network as the backend server

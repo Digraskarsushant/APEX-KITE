@@ -38,8 +38,8 @@ export const apiService = {
     return res.data;
   },
 
-  register: async (username, email, password, otp) => {
-    const res = await api.post('/api/auth/register', { username, email, password, otp });
+  register: async (username, email, password) => {
+    const res = await api.post('/api/auth/register', { username, email, password });
     return res.data;
   },
 

@@ -202,9 +202,9 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const registerAction = async (username, email, password, otp) => {
+  const registerAction = async (username, email, password) => {
     try {
-      const res = await apiService.register(username, email, password, otp);
+      const res = await apiService.register(username, email, password);
       // Auto login upon successful registration
       setUserId(res.user_id);
       const userObj = {

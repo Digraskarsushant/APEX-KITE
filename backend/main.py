@@ -512,24 +512,7 @@ def auth_register(payload: schemas.UserRegister, db: Session = Depends(get_db)):
     if existing_user:
         raise HTTPException(status_code=400, detail="Username or email already registered")
 
-    # 2. Validate the OTP code
-    email_key = payload.email.lower().strip()
-    if email_key not in otp_cache:
-        raise HTTPException(status_code=400, detail="No OTP requested for this email. Please request a new OTP.")
-
-    cached_record = otp_cache[email_key]
-    
-    # 3. Check for OTP expiration
-    if datetime.datetime.utcnow() > cached_record["expires_at"]:
-        # Delete expired OTP record from cache
-        otp_cache.pop(email_key, None)
-        raise HTTPException(status_code=400, detail="OTP code has expired. Please request a new OTP.")
-
-    # 4. Check for OTP correctness
-    if cached_record["otp"] != payload.otp.strip():
-        raise HTTPException(status_code=400, detail="Invalid OTP code. Please check your email and try again.")
-
-    # OTP is valid! Create the user in the database
+    # Create the user in the database directly
     new_user = models.User(
         username=payload.username,
         email=payload.email,

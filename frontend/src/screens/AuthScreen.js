@@ -51,27 +51,6 @@ export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
   const [errorAlert, setErrorAlert] = useState('');
 
-  // OTP Verification States
-  const [otpVisible, setOtpVisible] = useState(false);
-  const [otpCode, setOtpCode] = useState('');
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [otpError, setOtpError] = useState('');
-  const [otpCountdown, setOtpCountdown] = useState(30);
-  const [sandboxOtp, setSandboxOtp] = useState('');
-
-  // Auto countdown for resending code
-  useEffect(() => {
-    let interval = null;
-    if (otpVisible && otpCountdown > 0) {
-      interval = setInterval(() => {
-        setOtpCountdown((prev) => prev - 1);
-      }, 1000);
-    } else {
-      clearInterval(interval);
-    }
-    return () => clearInterval(interval);
-  }, [otpVisible, otpCountdown]);
-
   const handleAuthSubmit = async () => {
     if (!username || !password) {
       setErrorAlert('Username and password fields are required.');
@@ -99,56 +78,12 @@ export default function AuthScreen() {
         setErrorAlert(res.error);
       }
     } else {
-      // Register Mode: Request OTP first!
-      const res = await requestOtpAction(username, email, password);
+      // Register Mode: Direct registration without OTP!
+      const res = await registerAction(username, email, password);
       setLoading(false);
-      if (res.success) {
-        setOtpError('');
-        setOtpCode(res.sandboxOtp || '');
-        setSandboxOtp(res.sandboxOtp || '');
-        setOtpCountdown(30);
-        setOtpVisible(true);
-      } else {
+      if (!res.success) {
         setErrorAlert(res.error);
       }
-    }
-  };
-
-  const handleVerifyAndRegister = async () => {
-    if (otpCode.trim().length !== 6) {
-      setOtpError('Please enter the 6-digit verification code.');
-      return;
-    }
-    setOtpLoading(true);
-    setOtpError('');
-
-    const res = await registerAction(username, email, password, otpCode.trim());
-    setOtpLoading(false);
-    if (res.success) {
-      setOtpVisible(false);
-    } else {
-      setOtpError(res.error);
-    }
-  };
-
-  const handleResendOtp = async () => {
-    if (otpCountdown > 0) return;
-    setOtpLoading(true);
-    setOtpError('');
-    const res = await requestOtpAction(username, email, password);
-    setOtpLoading(false);
-    if (res.success) {
-      setOtpCountdown(30);
-      setOtpError('');
-      setOtpCode(res.sandboxOtp || '');
-      setSandboxOtp(res.sandboxOtp || '');
-      if (res.sandboxOtp) {
-        alert("Sandbox Mode: Outbound firewall detected. Auto-filled sandbox code: " + res.sandboxOtp);
-      } else {
-        alert("A new verification code has been sent to your email!");
-      }
-    } else {
-      setOtpError(res.error);
     }
   };
 
@@ -269,95 +204,7 @@ export default function AuthScreen() {
         </View>
       </View>
 
-      {/* 2. Email OTP Verification Modal Overlay */}
-      <Modal
-        visible={otpVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setOtpVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-            {/* Header */}
-            <View style={styles.modalHeader}>
-              <View style={styles.headerLeft}>
-                <ShieldCheck size={18} color="#ff5722" />
-                <Text style={[styles.modalTitle, { color: theme.text }]}>Email Verification</Text>
-              </View>
-              <TouchableOpacity onPress={() => setOtpVisible(false)} style={styles.closeBtn}>
-                <X size={16} color={theme.textSecondary} />
-              </TouchableOpacity>
-            </View>
 
-            {/* Subtitle */}
-            <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>
-              We have sent a secure 6-digit One-Time Password (OTP) to your registered email:{"\n"}
-              <Text style={[styles.emailHighlight, { color: theme.text }]}>{email}</Text>
-            </Text>
-
-            {/* Sandbox Helper Alert */}
-            {sandboxOtp ? (
-              <View style={[styles.modalErrorBox, { backgroundColor: 'rgba(255, 152, 0, 0.08)', borderColor: 'rgba(255, 152, 0, 0.25)', marginBottom: 15 }]}>
-                <Info size={14} color="#ff9800" style={{ marginRight: 6 }} />
-                <Text style={[styles.modalErrorText, { color: '#ff9800', fontSize: 11 }]}>
-                  <Text style={{ fontWeight: 'bold' }}>Sandbox Mode Active: </Text>
-                  Outbound email block detected on Render. The system has auto-filled the code <Text style={{ fontWeight: 'bold', textDecorationLine: 'underline' }}>{sandboxOtp}</Text> for your convenience.
-                </Text>
-              </View>
-            ) : null}
-
-            {/* Error Notification */}
-            {otpError !== '' && (
-              <View style={styles.modalErrorBox}>
-                <Info size={14} color="#ef5350" style={{ marginRight: 6 }} />
-                <Text style={styles.modalErrorText}>{otpError}</Text>
-              </View>
-            )}
-
-            {/* OTP Input box */}
-            <View style={[styles.otpInputWrapper, { backgroundColor: theme.background, borderColor: theme.border }]}>
-              <TextInput
-                style={[styles.otpTextInput, { color: theme.text }]}
-                placeholder="0 0 0 0 0 0"
-                placeholderTextColor={theme.isDark ? '#484f58' : '#9ca3af'}
-                value={otpCode}
-                onChangeText={(txt) => setOtpCode(txt.replace(/[^0-9]/g, ''))}
-                keyboardType="numeric"
-                maxLength={6}
-                autoFocus={true}
-                autoCapitalize="none"
-              />
-            </View>
-
-            {/* Action Verify Button */}
-            <TouchableOpacity 
-              style={[styles.verifySubmitBtn, { backgroundColor: theme.accent }]} 
-              onPress={handleVerifyAndRegister} 
-              disabled={otpLoading}
-            >
-              {otpLoading ? (
-                <ActivityIndicator color="#ffffff" />
-              ) : (
-                <Text style={styles.verifySubmitText}>VERIFY & CREATE ACCOUNT</Text>
-              )}
-            </TouchableOpacity>
-
-            {/* Resend Link Timer */}
-            <View style={styles.resendContainer}>
-              {otpCountdown > 0 ? (
-                <Text style={[styles.resendTimerText, { color: theme.textSecondary }]}>
-                  Resend code in <Text style={{ color: theme.text, fontWeight: 'bold' }}>{otpCountdown}s</Text>
-                </Text>
-              ) : (
-                <TouchableOpacity style={styles.resendLinkBtn} onPress={handleResendOtp} disabled={otpLoading}>
-                  <RefreshCw size={12} color="#ff5722" style={{ marginRight: 5 }} />
-                  <Text style={styles.resendLinkText}>Resend Code to Email</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       <Text style={[styles.copyrightText, { color: theme.textSecondary }]}>
         Apex Kite Terminal v1.0.0 — Secured with simulated AES-256 sessioning

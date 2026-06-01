@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Dimensions, Modal } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
-import { User, Lock, Mail, ChevronRight, Info, ShieldCheck, RefreshCw, X } from 'lucide-react-native';
+import { User, Lock, Mail, ChevronRight, Info, ShieldCheck, RefreshCw, X, Eye, EyeOff } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 
 // Beautiful upward helix exponential logo drawn in SVG
@@ -47,6 +47,8 @@ export default function AuthScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [errorAlert, setErrorAlert] = useState('');
@@ -165,11 +167,18 @@ export default function AuthScreen() {
               style={[styles.textInput, { color: theme.text }]}
               placeholder="Security Password"
               placeholderTextColor={theme.isDark ? '#484f58' : '#9ca3af'}
-              secureTextEntry={true}
+              secureTextEntry={!showPassword}
               value={password}
               onChangeText={setPassword}
               autoCapitalize="none"
             />
+            <TouchableOpacity onPress={() => setShowPassword(prev => !prev)} style={styles.eyeIconWrapper}>
+              {showPassword ? (
+                <EyeOff size={16} color={theme.textSecondary} />
+              ) : (
+                <Eye size={16} color={theme.textSecondary} />
+              )}
+            </TouchableOpacity>
           </View>
 
           {/* Confirm Password (Register only) */}
@@ -180,11 +189,18 @@ export default function AuthScreen() {
                 style={[styles.textInput, { color: theme.text }]}
                 placeholder="Confirm Password"
                 placeholderTextColor={theme.isDark ? '#484f58' : '#9ca3af'}
-                secureTextEntry={true}
+                secureTextEntry={!showConfirmPassword}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 autoCapitalize="none"
               />
+              <TouchableOpacity onPress={() => setShowConfirmPassword(prev => !prev)} style={styles.eyeIconWrapper}>
+                {showConfirmPassword ? (
+                  <EyeOff size={16} color={theme.textSecondary} />
+                ) : (
+                  <Eye size={16} color={theme.textSecondary} />
+                )}
+              </TouchableOpacity>
             </View>
           )}
 
@@ -316,6 +332,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     paddingVertical: 10,
     outlineStyle: 'none', // removes blue box on web
+  },
+  eyeIconWrapper: {
+    paddingLeft: 8,
+    paddingVertical: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    cursor: 'pointer',
   },
   submitBtn: {
     backgroundColor: '#ff5722',

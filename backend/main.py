@@ -523,9 +523,6 @@ def auth_register(payload: schemas.UserRegister, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
-    # Clean up the validated OTP from memory cache
-    otp_cache.pop(email_key, None)
-
     # Seed default watchlist indices for the new user!
     default_symbols = ["NIFTY50", "SENSEX", "BANKNIFTY", "RELIANCE", "TCS", "INFY"]
     for symbol in default_symbols:

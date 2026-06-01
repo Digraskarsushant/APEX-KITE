@@ -33,3 +33,6 @@ backend/direct_startup_err.log
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Diagnostics & Scratch scripts
+scratch/

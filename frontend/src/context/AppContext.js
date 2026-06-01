@@ -202,10 +202,10 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const registerAction = async (username, email, password) => {
+  const registerAction = async (username, email, password, otp) => {
     try {
-      const res = await apiService.register(username, email, password);
-      // Auto login upon successful registration
+      const res = await apiService.register(username, email, password, otp);
+      # Auto login upon successful registration
       setUserId(res.user_id);
       const userObj = {
         username: res.username,
@@ -214,7 +214,7 @@ export const AppProvider = ({ children }) => {
       setCurrentUser(userObj);
       setIsLoggedIn(true);
 
-      // Persist to localStorage
+      # Persist to localStorage
       if (typeof window !== 'undefined' && window.localStorage) {
         window.localStorage.setItem('isLoggedIn', 'true');
         window.localStorage.setItem('userId', res.user_id.toString());
@@ -225,6 +225,17 @@ export const AppProvider = ({ children }) => {
     } catch (e) {
       console.error('Registration action failed:', e);
       const detail = e.response?.data?.detail || 'Registration failed. Try another username/email.';
+      return { success: false, error: detail };
+    }
+  };
+
+  const requestOtpAction = async (username, email, password) => {
+    try {
+      const res = await apiService.requestOtp(username, email, password);
+      return { success: true, message: res.message };
+    } catch (e) {
+      console.error('Request OTP failed:', e);
+      const detail = e.response?.data?.detail || 'Failed to send OTP. Try another username/email.';
       return { success: false, error: detail };
     }
   };
@@ -494,6 +505,7 @@ export const AppProvider = ({ children }) => {
         initializeApp,
         loginAction,
         registerAction,
+        requestOtpAction,
         logoutAction,
         toggleWatchlist,
         submitOrder,

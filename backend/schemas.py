@@ -82,10 +82,16 @@ class UserProfile(BaseModel):
 class AddFundsRequest(BaseModel):
     amount: float
 
+class OTPRequest(BaseModel):
+    username: str
+    email: str
+    password: str
+
 class UserRegister(BaseModel):
     username: str
     email: str
     password: str
+    otp: str
 
 class UserLogin(BaseModel):
     username: str

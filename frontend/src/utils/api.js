@@ -38,8 +38,13 @@ export const apiService = {
     return res.data;
   },
 
-  register: async (username, email, password) => {
-    const res = await api.post('/api/auth/register', { username, email, password });
+  register: async (username, email, password, otp) => {
+    const res = await api.post('/api/auth/register', { username, email, password, otp });
+    return res.data;
+  },
+
+  requestOtp: async (username, email, password) => {
+    const res = await api.post('/api/auth/request_otp', { username, email, password });
     return res.data;
   },
 

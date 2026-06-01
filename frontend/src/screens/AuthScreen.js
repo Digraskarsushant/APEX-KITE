@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Dimensions, Modal } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
-import { User, Lock, Mail, ChevronRight, Info } from 'lucide-react-native';
+import { User, Lock, Mail, ChevronRight, Info, ShieldCheck, RefreshCw, X } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 
 // Beautiful upward helix exponential logo drawn in SVG
@@ -40,7 +40,7 @@ function ApexLogo() {
 }
 
 export default function AuthScreen() {
-  const { loginAction, registerAction, theme } = useApp();
+  const { loginAction, registerAction, requestOtpAction, theme } = useApp();
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
   
   const [username, setUsername] = useState('trader_demo');
@@ -50,6 +50,26 @@ export default function AuthScreen() {
 
   const [loading, setLoading] = useState(false);
   const [errorAlert, setErrorAlert] = useState('');
+
+  // OTP Verification States
+  const [otpVisible, setOtpVisible] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState('');
+  const [otpCountdown, setOtpCountdown] = useState(30);
+
+  // Auto countdown for resending code
+  useEffect(() => {
+    let interval = null;
+    if (otpVisible && otpCountdown > 0) {
+      interval = setInterval(() => {
+        setOtpCountdown((prev) => prev - 1);
+      }, 1000);
+    } else {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [otpVisible, otpCountdown]);
 
   const handleAuthSubmit = async () => {
     if (!username || !password) {
@@ -71,16 +91,56 @@ export default function AuthScreen() {
     setLoading(true);
     setErrorAlert('');
 
-    let res;
     if (authMode === 'login') {
-      res = await loginAction(username, password);
+      const res = await loginAction(username, password);
+      setLoading(false);
+      if (!res.success) {
+        setErrorAlert(res.error);
+      }
     } else {
-      res = await registerAction(username, email, password);
+      // Register Mode: Request OTP first!
+      const res = await requestOtpAction(username, email, password);
+      setLoading(false);
+      if (res.success) {
+        setOtpError('');
+        setOtpCode('');
+        setOtpCountdown(30);
+        setOtpVisible(true);
+      } else {
+        setErrorAlert(res.error);
+      }
     }
+  };
 
-    setLoading(false);
-    if (!res.success) {
-      setErrorAlert(res.error);
+  const handleVerifyAndRegister = async () => {
+    if (otpCode.trim().length !== 6) {
+      setOtpError('Please enter the 6-digit verification code.');
+      return;
+    }
+    setOtpLoading(true);
+    setOtpError('');
+
+    const res = await registerAction(username, email, password, otpCode.trim());
+    setOtpLoading(false);
+    if (res.success) {
+      setOtpVisible(false);
+    } else {
+      setOtpError(res.error);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (otpCountdown > 0) return;
+    setOtpLoading(true);
+    setOtpError('');
+    const res = await requestOtpAction(username, email, password);
+    setOtpLoading(false);
+    if (res.success) {
+      setOtpCountdown(30);
+      setOtpError('');
+      alert("A new verification code has been sent to your email!");
+    } else {
+      setOtpError(res.error);
     }
   };
 
@@ -200,6 +260,85 @@ export default function AuthScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* 2. Email OTP Verification Modal Overlay */}
+      <Modal
+        visible={otpVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setOtpVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            {/* Header */}
+            <View style={styles.modalHeader}>
+              <View style={styles.headerLeft}>
+                <ShieldCheck size={18} color="#ff5722" />
+                <Text style={[styles.modalTitle, { color: theme.text }]}>Email Verification</Text>
+              </View>
+              <TouchableOpacity onPress={() => setOtpVisible(false)} style={styles.closeBtn}>
+                <X size={16} color={theme.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Subtitle */}
+            <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>
+              We have sent a secure 6-digit One-Time Password (OTP) to your registered email:{"\n"}
+              <Text style={[styles.emailHighlight, { color: theme.text }]}>{email}</Text>
+            </Text>
+
+            {/* Error Notification */}
+            {otpError !== '' && (
+              <View style={styles.modalErrorBox}>
+                <Info size={14} color="#ef5350" style={{ marginRight: 6 }} />
+                <Text style={styles.modalErrorText}>{otpError}</Text>
+              </View>
+            )}
+
+            {/* OTP Input box */}
+            <View style={[styles.otpInputWrapper, { backgroundColor: theme.background, borderColor: theme.border }]}>
+              <TextInput
+                style={[styles.otpTextInput, { color: theme.text }]}
+                placeholder="0 0 0 0 0 0"
+                placeholderTextColor={theme.isDark ? '#484f58' : '#9ca3af'}
+                value={otpCode}
+                onChangeText={(txt) => setOtpCode(txt.replace(/[^0-9]/g, ''))}
+                keyboardType="numeric"
+                maxLength={6}
+                autoFocus={true}
+                autoCapitalize="none"
+              />
+            </View>
+
+            {/* Action Verify Button */}
+            <TouchableOpacity 
+              style={[styles.verifySubmitBtn, { backgroundColor: theme.accent }]} 
+              onPress={handleVerifyAndRegister} 
+              disabled={otpLoading}
+            >
+              {otpLoading ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text style={styles.verifySubmitText}>VERIFY & CREATE ACCOUNT</Text>
+              )}
+            </TouchableOpacity>
+
+            {/* Resend Link Timer */}
+            <View style={styles.resendContainer}>
+              {otpCountdown > 0 ? (
+                <Text style={[styles.resendTimerText, { color: theme.textSecondary }]}>
+                  Resend code in <Text style={{ color: theme.text, fontWeight: 'bold' }}>{otpCountdown}s</Text>
+                </Text>
+              ) : (
+                <TouchableOpacity style={styles.resendLinkBtn} onPress={handleResendOtp} disabled={otpLoading}>
+                  <RefreshCw size={12} color="#ff5722" style={{ marginRight: 5 }} />
+                  <Text style={styles.resendLinkText}>Resend Code to Email</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Text style={[styles.copyrightText, { color: theme.textSecondary }]}>
         Apex Kite Terminal v1.0.0 — Secured with simulated AES-256 sessioning
@@ -336,5 +475,126 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 20,
     textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: '#161b22',
+    borderWidth: 1,
+    borderColor: '#30363d',
+    borderRadius: 20,
+    padding: 25,
+    shadowColor: '#ff5722',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#21262d',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  closeBtn: {
+    padding: 4,
+  },
+  modalSubtitle: {
+    fontSize: 12.5,
+    color: '#808a9d',
+    lineHeight: 18,
+    marginBottom: 20,
+  },
+  emailHighlight: {
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  modalErrorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 83, 80, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 83, 80, 0.3)',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 15,
+  },
+  modalErrorText: {
+    color: '#ef5350',
+    fontSize: 11.5,
+    flex: 1,
+  },
+  otpInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0c1017',
+    borderWidth: 1,
+    borderColor: '#30363d',
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    marginBottom: 20,
+  },
+  otpTextInput: {
+    flex: 1,
+    color: '#ffffff',
+    fontSize: 26,
+    fontWeight: 'bold',
+    letterSpacing: 8,
+    textAlign: 'center',
+    paddingVertical: 12,
+    outlineStyle: 'none',
+  },
+  verifySubmitBtn: {
+    backgroundColor: '#ff5722',
+    borderRadius: 8,
+    paddingVertical: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 15,
+  },
+  verifySubmitText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  resendContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 5,
+  },
+  resendTimerText: {
+    fontSize: 12,
+    color: '#808a9d',
+  },
+  resendLinkBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 5,
+  },
+  resendLinkText: {
+    color: '#ff5722',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });

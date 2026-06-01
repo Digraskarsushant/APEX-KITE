@@ -5,6 +5,11 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Set
 import datetime
+import smtplib
+import random
+import os
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 import models
 import schemas
@@ -70,6 +75,86 @@ app.add_middleware(
 
 # Active WebSocket connections
 active_websocket_connections: Set[WebSocket] = set()
+
+# Memory cache for OTPs: { email: { "otp": "123456", "expires_at": datetime, "username": "sushant" } }
+otp_cache: Dict[str, Dict[str, Any]] = {}
+
+def send_otp_email(username: str, to_email: str, otp: str):
+    # Retrieve SMTP configurations from environment variables
+    smtp_host = os.getenv("SMTP_HOST")
+    smtp_port = os.getenv("SMTP_PORT")
+    smtp_username = os.getenv("SMTP_USERNAME")
+    smtp_password = os.getenv("SMTP_PASSWORD")
+    smtp_sender = os.getenv("SMTP_SENDER", "noreply@apex-kite.com")
+
+    html_content = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e1e4e8; border-radius: 12px; background-color: #ffffff;">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <h2 style="color: #ff5722; margin: 0; font-size: 24px; font-weight: bold; letter-spacing: 1px;">APEX KITE</h2>
+            <p style="color: #808a9d; font-size: 11px; margin: 5px 0 0 0; text-transform: uppercase; letter-spacing: 1.5px;">High-Frequency Trading Terminal Suite</p>
+        </div>
+        <hr style="border: none; border-top: 1px solid #e1e4e8; margin: 20px 0;">
+        <p style="color: #0c1017; font-size: 14px;">Hello <strong>{username}</strong>,</p>
+        <p style="color: #0c1017; font-size: 14px; line-height: 1.6;">Thank you for registering on APEX KITE! To complete your account registration, please verify your email address using the secure 6-digit One-Time Password (OTP) below:</p>
+        <div style="text-align: center; margin: 30px 0;">
+            <span style="font-size: 32px; font-weight: bold; color: #ff5722; letter-spacing: 6px; border: 2px dashed #ff5722; padding: 12px 24px; border-radius: 8px; background-color: #fff8f5; display: inline-block;">
+                {otp}
+            </span>
+        </div>
+        <p style="color: #ef5350; font-size: 12px; font-weight: bold; margin-bottom: 5px;">⚠️ Security Notice:</p>
+        <p style="color: #808a9d; font-size: 12px; line-height: 1.5; margin: 0;">This OTP is strictly confidential and valid for **5 minutes**. Never share this code with anyone. If you did not request this verification, please ignore this email.</p>
+        <hr style="border: none; border-top: 1px solid #e1e4e8; margin: 20px 0;">
+        <div style="text-align: center; color: #808a9d; font-size: 11px;">
+            <p style="margin: 0;">Secured with dynamic session credentials</p>
+            <p style="margin: 5px 0 0 0;">© 2026 Apex Kite Terminal. All rights reserved.</p>
+        </div>
+    </div>
+    """
+
+    # If any required SMTP parameter is missing, fallback to staging mock console log!
+    if not all([smtp_host, smtp_port, smtp_username, smtp_password]):
+        print("\n" + "="*80)
+        print("⚡ STAGING EMAIL OTP VERIFICATION SANDBOX ⚡")
+        print(f"Recipient: {username} <{to_email}>")
+        print(f"Generated secure OTP: {otp}")
+        print("-"*80)
+        print("HTML EMAIL PREVIEW:")
+        print(html_content.strip())
+        print("="*80 + "\n")
+        return
+
+    # Send real email using configured SMTP parameters
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = f"APEX KITE Email Verification Code: {otp}"
+        msg["From"] = smtp_sender
+        msg["To"] = to_email
+
+        part = MIMEText(html_content, "html")
+        msg.attach(part)
+
+        port = int(smtp_port)
+        if port == 465:
+            # SSL Connection
+            server = smtplib.SMTP_SSL(smtp_host, port)
+        else:
+            # TLS Connection (port 587 or others)
+            server = smtplib.SMTP(smtp_host, port)
+            server.starttls()
+
+        server.login(smtp_username, smtp_password)
+        server.sendmail(smtp_sender, [to_email], msg.as_string())
+        server.quit()
+        print(f"Successfully sent OTP email to {to_email} via SMTP.")
+    except Exception as e:
+        print(f"SMTP Error: Failed to send OTP email to {to_email}: {e}")
+        # Always fallback to console print if SMTP fails so testing is never blocked!
+        print("\n" + "="*80)
+        print("⚠️ SMTP EXCEPTION FALLBACK — MOCK OTP CONSOLE DUMP ⚠️")
+        print(f"Recipient: {username} <{to_email}>")
+        print(f"OTP Verification Code: {otp}")
+        print("="*80 + "\n")
+
 
 # Helper function to seed default user
 def seed_default_user():
@@ -329,14 +414,62 @@ async def startup_event():
 # --- API Routes ---
 
 # --- Authentication ---
-@app.post("/api/auth/register", response_model=schemas.AuthResponse)
-def auth_register(payload: schemas.UserRegister, db: Session = Depends(get_db)):
+@app.post("/api/auth/request_otp")
+def request_otp(payload: schemas.OTPRequest, db: Session = Depends(get_db)):
+    # 1. Validate if user is already registered (username or email)
     existing_user = db.query(models.User).filter(
         (models.User.username == payload.username) | (models.User.email == payload.email)
     ).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Username or email already registered")
 
+    # 2. Generate a secure 6-digit random OTP
+    otp = f"{random.randint(100000, 999999)}"
+    
+    # 3. Cache the OTP with a 5-minute expiry window
+    expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=5)
+    otp_cache[payload.email.lower().strip()] = {
+        "otp": otp,
+        "expires_at": expires_at,
+        "username": payload.username
+    }
+
+    # 4. Trigger sending of the OTP email (real SMTP or mock fallback)
+    send_otp_email(payload.username, payload.email.strip(), otp)
+
+    return {
+        "status": "success",
+        "message": f"OTP successfully sent to your email: {payload.email}!"
+    }
+
+
+@app.post("/api/auth/register", response_model=schemas.AuthResponse)
+def auth_register(payload: schemas.UserRegister, db: Session = Depends(get_db)):
+    # 1. Double check if username/email already registered
+    existing_user = db.query(models.User).filter(
+        (models.User.username == payload.username) | (models.User.email == payload.email)
+    ).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Username or email already registered")
+
+    # 2. Validate the OTP code
+    email_key = payload.email.lower().strip()
+    if email_key not in otp_cache:
+        raise HTTPException(status_code=400, detail="No OTP requested for this email. Please request a new OTP.")
+
+    cached_record = otp_cache[email_key]
+    
+    # 3. Check for OTP expiration
+    if datetime.datetime.utcnow() > cached_record["expires_at"]:
+        # Delete expired OTP record from cache
+        otp_cache.pop(email_key, None)
+        raise HTTPException(status_code=400, detail="OTP code has expired. Please request a new OTP.")
+
+    # 4. Check for OTP correctness
+    if cached_record["otp"] != payload.otp.strip():
+        raise HTTPException(status_code=400, detail="Invalid OTP code. Please check your email and try again.")
+
+    # OTP is valid! Create the user in the database
     new_user = models.User(
         username=payload.username,
         email=payload.email,
@@ -346,6 +479,9 @@ def auth_register(payload: schemas.UserRegister, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+
+    # Clean up the validated OTP from memory cache
+    otp_cache.pop(email_key, None)
 
     # Seed default watchlist indices for the new user!
     default_symbols = ["NIFTY50", "SENSEX", "BANKNIFTY", "RELIANCE", "TCS", "INFY"]

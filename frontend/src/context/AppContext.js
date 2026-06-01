@@ -205,7 +205,7 @@ export const AppProvider = ({ children }) => {
   const registerAction = async (username, email, password, otp) => {
     try {
       const res = await apiService.register(username, email, password, otp);
-      # Auto login upon successful registration
+      // Auto login upon successful registration
       setUserId(res.user_id);
       const userObj = {
         username: res.username,
@@ -214,7 +214,7 @@ export const AppProvider = ({ children }) => {
       setCurrentUser(userObj);
       setIsLoggedIn(true);
 
-      # Persist to localStorage
+      // Persist to localStorage
       if (typeof window !== 'undefined' && window.localStorage) {
         window.localStorage.setItem('isLoggedIn', 'true');
         window.localStorage.setItem('userId', res.user_id.toString());

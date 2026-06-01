@@ -1,6 +1,7 @@
 import asyncio
 from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Set
 import datetime
@@ -74,6 +75,12 @@ active_websocket_connections: Set[WebSocket] = set()
 def seed_default_user():
     db = SessionLocal()
     try:
+        # Synchronize PostgreSQL auto-increment sequence for the users table
+        # This prevents unique constraint violations (IntegrityError) when registering new users
+        if "postgresql" in database.DATABASE_URL or "postgres" in database.DATABASE_URL:
+            db.execute(text("SELECT setval('users_id_seq', COALESCE((SELECT MAX(id) FROM users), 1), true)"))
+            db.commit()
+
         user = db.query(models.User).filter(models.User.id == 1).first()
         if not user:
             user = models.User(

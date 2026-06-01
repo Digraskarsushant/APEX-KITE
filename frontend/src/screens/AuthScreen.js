@@ -43,9 +43,9 @@ export default function AuthScreen() {
   const { loginAction, registerAction, requestOtpAction, theme } = useApp();
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
   
-  const [username, setUsername] = useState('trader_demo');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('demo123');
+  const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
   const [loading, setLoading] = useState(false);

@@ -232,7 +232,7 @@ export const AppProvider = ({ children }) => {
   const requestOtpAction = async (username, email, password) => {
     try {
       const res = await apiService.requestOtp(username, email, password);
-      return { success: true, message: res.message };
+      return { success: true, message: res.message, sandboxOtp: res.debug_otp };
     } catch (e) {
       console.error('Request OTP failed:', e);
       const detail = e.response?.data?.detail || 'Failed to send OTP. Try another username/email.';

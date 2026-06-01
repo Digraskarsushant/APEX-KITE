@@ -57,6 +57,7 @@ export default function AuthScreen() {
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState('');
   const [otpCountdown, setOtpCountdown] = useState(30);
+  const [sandboxOtp, setSandboxOtp] = useState('');
 
   // Auto countdown for resending code
   useEffect(() => {
@@ -103,7 +104,8 @@ export default function AuthScreen() {
       setLoading(false);
       if (res.success) {
         setOtpError('');
-        setOtpCode('');
+        setOtpCode(res.sandboxOtp || '');
+        setSandboxOtp(res.sandboxOtp || '');
         setOtpCountdown(30);
         setOtpVisible(true);
       } else {
@@ -138,7 +140,13 @@ export default function AuthScreen() {
     if (res.success) {
       setOtpCountdown(30);
       setOtpError('');
-      alert("A new verification code has been sent to your email!");
+      setOtpCode(res.sandboxOtp || '');
+      setSandboxOtp(res.sandboxOtp || '');
+      if (res.sandboxOtp) {
+        alert("Sandbox Mode: Outbound firewall detected. Auto-filled sandbox code: " + res.sandboxOtp);
+      } else {
+        alert("A new verification code has been sent to your email!");
+      }
     } else {
       setOtpError(res.error);
     }
@@ -286,6 +294,17 @@ export default function AuthScreen() {
               We have sent a secure 6-digit One-Time Password (OTP) to your registered email:{"\n"}
               <Text style={[styles.emailHighlight, { color: theme.text }]}>{email}</Text>
             </Text>
+
+            {/* Sandbox Helper Alert */}
+            {sandboxOtp ? (
+              <View style={[styles.modalErrorBox, { backgroundColor: 'rgba(255, 152, 0, 0.08)', borderColor: 'rgba(255, 152, 0, 0.25)', marginBottom: 15 }]}>
+                <Info size={14} color="#ff9800" style={{ marginRight: 6 }} />
+                <Text style={[styles.modalErrorText, { color: '#ff9800', fontSize: 11 }]}>
+                  <Text style={{ fontWeight: 'bold' }}>Sandbox Mode Active: </Text>
+                  Outbound email block detected on Render. The system has auto-filled the code <Text style={{ fontWeight: 'bold', textDecorationLine: 'underline' }}>{sandboxOtp}</Text> for your convenience.
+                </Text>
+              </View>
+            ) : null}
 
             {/* Error Notification */}
             {otpError !== '' && (

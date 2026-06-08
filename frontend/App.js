@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, SafeAreaView, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Star, Briefcase, ClipboardList, User as UserIcon, TrendingUp, TrendingDown, RefreshCw, Settings as SettingsIcon } from 'lucide-react-native';
+import { Star, Briefcase, ClipboardList, User as UserIcon, TrendingUp, TrendingDown, RefreshCw, Settings as SettingsIcon, Globe } from 'lucide-react-native';
 
 import { AppProvider, useApp } from './src/context/AppContext';
 import AuthScreen from './src/screens/AuthScreen';
 import WatchlistScreen from './src/screens/WatchlistScreen';
+import ForexScreen from './src/screens/ForexScreen';
 import StockDetailScreen from './src/screens/StockDetailScreen';
 import PortfolioScreen from './src/screens/PortfolioScreen';
 import OrdersScreen from './src/screens/OrdersScreen';
@@ -63,6 +64,8 @@ function MainAppContent() {
     switch (activeScreen) {
       case 'watchlist':
         return <WatchlistScreen onNavigateToDetail={navigateToDetail} />;
+      case 'forex':
+        return <ForexScreen onNavigateToDetail={navigateToDetail} />;
       case 'detail':
         return <StockDetailScreen symbol={detailSymbol} onBack={navigateBack} />;
       case 'portfolio':
@@ -123,6 +126,14 @@ function MainAppContent() {
             </TouchableOpacity>
 
             <TouchableOpacity
+              style={[styles.desktopTab, activeScreen === 'forex' && styles.desktopTabActive, activeScreen === 'forex' && { backgroundColor: theme.background, borderColor: theme.border }]}
+              onPress={() => setActiveScreen('forex')}
+            >
+              <Globe size={14} color={activeScreen === 'forex' ? '#ff5722' : theme.textSecondary} />
+              <Text style={[styles.desktopTabText, { color: theme.textSecondary }, activeScreen === 'forex' && styles.desktopTabTextActive]}>Forex</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={[styles.desktopTab, activeScreen === 'portfolio' && styles.desktopTabActive, activeScreen === 'portfolio' && { backgroundColor: theme.background, borderColor: theme.border }]}
               onPress={() => setActiveScreen('portfolio')}
             >
@@ -171,6 +182,14 @@ function MainAppContent() {
           >
             <Star size={18} color={activeScreen === 'watchlist' ? '#ff5722' : theme.textSecondary} />
             <Text style={[styles.mobileTabText, { color: theme.textSecondary }, activeScreen === 'watchlist' && styles.mobileTabTextActive]}>Watchlist</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.mobileTab, activeScreen === 'forex' && styles.mobileTabActive]}
+            onPress={() => setActiveScreen('forex')}
+          >
+            <Globe size={18} color={activeScreen === 'forex' ? '#ff5722' : theme.textSecondary} />
+            <Text style={[styles.mobileTabText, { color: theme.textSecondary }, activeScreen === 'forex' && styles.mobileTabTextActive]}>Forex</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

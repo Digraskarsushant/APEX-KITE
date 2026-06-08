@@ -168,6 +168,14 @@ STOCK_CONFIG = {
     "AMZN": {"name": "Amazon.com Inc.", "ticker": "AMZN", "base": 180.0, "volatility": 0.0014},
     "TSLA": {"name": "Tesla Inc.", "ticker": "TSLA", "base": 175.0, "volatility": 0.0025},
     "META": {"name": "Meta Platforms Inc. (Facebook)", "ticker": "META", "base": 500.0, "volatility": 0.0018},
+
+    # --- Major Forex Pairs ---
+    "EURUSD": {"name": "EUR/USD", "ticker": "EURUSD=X", "base": 1.08, "volatility": 0.0003},
+    "GBPUSD": {"name": "GBP/USD", "ticker": "GBPUSD=X", "base": 1.27, "volatility": 0.0004},
+    "USDJPY": {"name": "USD/JPY", "ticker": "JPY=X", "base": 150.50, "volatility": 0.0005},
+    "AUDUSD": {"name": "AUD/USD", "ticker": "AUDUSD=X", "base": 0.65, "volatility": 0.0004},
+    "USDCAD": {"name": "USD/CAD", "ticker": "CAD=X", "base": 1.35, "volatility": 0.0003},
+    "USDINR": {"name": "USD/INR", "ticker": "INR=X", "base": 83.20, "volatility": 0.0002},
 }
 
 class MarketSimulator:

@@ -1,18 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Dimensions, Modal, Image } from 'react-native';
-import Svg, { Path, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
+import Svg, { Path, Defs, LinearGradient, Stop, Circle, Polygon } from 'react-native-svg';
 import { User, Lock, Mail, ChevronRight, Info, ShieldCheck, RefreshCw, X, Eye, EyeOff } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 
-// Professional App Logo
+// Razor-sharp SVG Origami Kite Logo
 function ApexLogo({ isDark }) {
+  // Navy colors for light mode, Slate/White colors for dark mode
+  const leftTop = isDark ? "#f8fafc" : "#2563eb";
+  const rightTop = isDark ? "#f1f5f9" : "#1d4ed8";
+  const leftBottom = isDark ? "#e2e8f0" : "#1e40af";
+  const rightBottom = isDark ? "#cbd5e1" : "#1e3a8a";
+  const accent = isDark ? "#94a3b8" : "#172554";
+
   return (
     <View style={styles.logoContainer}>
-      <Image 
-        source={isDark ? require('../../assets/icon-dark.png') : require('../../assets/icon.png')} 
-        style={{ width: 90, height: 90, borderRadius: 20 }} 
-        resizeMode="contain"
-      />
+      <Svg width={90} height={90} viewBox="0 0 100 100">
+        {/* Left Top Quadrant */}
+        <Polygon points="50,10 15,45 50,45" fill={leftTop} />
+        {/* Right Top Quadrant */}
+        <Polygon points="50,10 85,45 50,45" fill={rightTop} />
+        {/* Left Bottom Quadrant */}
+        <Polygon points="50,95 15,45 50,45" fill={leftBottom} />
+        {/* Right Bottom Quadrant */}
+        <Polygon points="50,95 85,45 50,45" fill={rightBottom} />
+        
+        {/* Center lines for origami fold effect */}
+        <Path d="M50,10 L50,95" stroke={accent} strokeWidth="1.5" strokeOpacity="0.4" />
+        <Path d="M15,45 L85,45" stroke={accent} strokeWidth="1.5" strokeOpacity="0.4" />
+      </Svg>
     </View>
   );
 }

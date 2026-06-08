@@ -5,10 +5,10 @@ import { useApp } from '../context/AppContext';
 import StripePaymentModal from './StripePaymentModal';
 import { getCurrencySymbol } from '../utils/api';
 
-export default function OrderModal({ visible, onClose, symbol, initialPrice }) {
+export default function OrderModal({ visible, onClose, symbol, initialPrice, initialAction = 'BUY' }) {
   const { userProfile, settings, submitOrder, theme, getExchangeRateToINR } = useApp();
 
-  const [transactionType, setTransactionType] = useState('BUY'); // 'BUY' | 'SELL'
+  const [transactionType, setTransactionType] = useState(initialAction); // 'BUY' | 'SELL'
   const [stripeVisible, setStripeVisible] = useState(false);
   const [productType, setProductType] = useState('CNC'); // 'CNC' (Delivery) | 'MIS' (Intraday)
   const [orderType, setOrderType] = useState('MARKET'); // 'MARKET' | 'LIMIT' | 'SL'

@@ -169,13 +169,53 @@ STOCK_CONFIG = {
     "TSLA": {"name": "Tesla Inc.", "ticker": "TSLA", "base": 175.0, "volatility": 0.0025},
     "META": {"name": "Meta Platforms Inc. (Facebook)", "ticker": "META", "base": 500.0, "volatility": 0.0018},
 
-    # --- Major Forex Pairs ---
+    # --- Global Forex Markets (Majors, Minors, Exotics) ---
     "EURUSD": {"name": "EUR/USD", "ticker": "EURUSD=X", "base": 1.08, "volatility": 0.0003},
     "GBPUSD": {"name": "GBP/USD", "ticker": "GBPUSD=X", "base": 1.27, "volatility": 0.0004},
     "USDJPY": {"name": "USD/JPY", "ticker": "JPY=X", "base": 150.50, "volatility": 0.0005},
-    "AUDUSD": {"name": "AUD/USD", "ticker": "AUDUSD=X", "base": 0.65, "volatility": 0.0004},
+    "USDCHF": {"name": "USD/CHF", "ticker": "CHF=X", "base": 0.88, "volatility": 0.0003},
     "USDCAD": {"name": "USD/CAD", "ticker": "CAD=X", "base": 1.35, "volatility": 0.0003},
+    "AUDUSD": {"name": "AUD/USD", "ticker": "AUDUSD=X", "base": 0.65, "volatility": 0.0004},
+    "NZDUSD": {"name": "NZD/USD", "ticker": "NZDUSD=X", "base": 0.61, "volatility": 0.0004},
+    
+    # Minors
+    "EURGBP": {"name": "EUR/GBP", "ticker": "EURGBP=X", "base": 0.85, "volatility": 0.0002},
+    "EURJPY": {"name": "EUR/JPY", "ticker": "EURJPY=X", "base": 162.50, "volatility": 0.0005},
+    "EURCHF": {"name": "EUR/CHF", "ticker": "EURCHF=X", "base": 0.95, "volatility": 0.0002},
+    "EURCAD": {"name": "EUR/CAD", "ticker": "EURCAD=X", "base": 1.46, "volatility": 0.0003},
+    "EURAUD": {"name": "EUR/AUD", "ticker": "EURAUD=X", "base": 1.66, "volatility": 0.0004},
+    "EURNZD": {"name": "EUR/NZD", "ticker": "EURNZD=X", "base": 1.77, "volatility": 0.0004},
+    "GBPJPY": {"name": "GBP/JPY", "ticker": "GBPJPY=X", "base": 190.50, "volatility": 0.0006},
+    "GBPCHF": {"name": "GBP/CHF", "ticker": "GBPCHF=X", "base": 1.12, "volatility": 0.0003},
+    "GBPCAD": {"name": "GBP/CAD", "ticker": "GBPCAD=X", "base": 1.72, "volatility": 0.0004},
+    "GBPAUD": {"name": "GBP/AUD", "ticker": "GBPAUD=X", "base": 1.95, "volatility": 0.0005},
+    "GBPNZD": {"name": "GBP/NZD", "ticker": "GBPNZD=X", "base": 2.08, "volatility": 0.0005},
+    "AUDJPY": {"name": "AUD/JPY", "ticker": "AUDJPY=X", "base": 98.00, "volatility": 0.0005},
+    "AUDCHF": {"name": "AUD/CHF", "ticker": "AUDCHF=X", "base": 0.57, "volatility": 0.0003},
+    "AUDCAD": {"name": "AUD/CAD", "ticker": "AUDCAD=X", "base": 0.88, "volatility": 0.0003},
+    "AUDNZD": {"name": "AUD/NZD", "ticker": "AUDNZD=X", "base": 1.06, "volatility": 0.0002},
+    "NZDJPY": {"name": "NZD/JPY", "ticker": "NZDJPY=X", "base": 91.50, "volatility": 0.0005},
+    "NZDCHF": {"name": "NZD/CHF", "ticker": "NZDCHF=X", "base": 0.53, "volatility": 0.0003},
+    "NZDCAD": {"name": "NZD/CAD", "ticker": "NZDCAD=X", "base": 0.82, "volatility": 0.0003},
+    "CADJPY": {"name": "CAD/JPY", "ticker": "CADJPY=X", "base": 111.50, "volatility": 0.0005},
+    "CADCHF": {"name": "CAD/CHF", "ticker": "CADCHF=X", "base": 0.65, "volatility": 0.0003},
+    "CHFJPY": {"name": "CHF/JPY", "ticker": "CHFJPY=X", "base": 171.00, "volatility": 0.0004},
+
+    # Exotics
     "USDINR": {"name": "USD/INR", "ticker": "INR=X", "base": 83.20, "volatility": 0.0002},
+    "USDSGD": {"name": "USD/SGD", "ticker": "SGD=X", "base": 1.34, "volatility": 0.0002},
+    "USDHKD": {"name": "USD/HKD", "ticker": "HKD=X", "base": 7.82, "volatility": 0.0001},
+    "USDZAR": {"name": "USD/ZAR", "ticker": "ZAR=X", "base": 18.50, "volatility": 0.0010},
+    "USDMXN": {"name": "USD/MXN", "ticker": "MXN=X", "base": 17.10, "volatility": 0.0008},
+    "USDTRY": {"name": "USD/TRY", "ticker": "TRY=X", "base": 31.00, "volatility": 0.0015},
+    "USDSEK": {"name": "USD/SEK", "ticker": "SEK=X", "base": 10.30, "volatility": 0.0004},
+    "USDNOK": {"name": "USD/NOK", "ticker": "NOK=X", "base": 10.50, "volatility": 0.0004},
+    "USDDKK": {"name": "USD/DKK", "ticker": "DKK=X", "base": 6.85, "volatility": 0.0003},
+    "USDCNY": {"name": "USD/CNY", "ticker": "CNY=X", "base": 7.20, "volatility": 0.0002},
+    "USDKRW": {"name": "USD/KRW", "ticker": "KRW=X", "base": 1330.00, "volatility": 0.0005},
+    "EURTRY": {"name": "EUR/TRY", "ticker": "EURTRY=X", "base": 33.50, "volatility": 0.0015},
+    "EURSEK": {"name": "EUR/SEK", "ticker": "EURSEK=X", "base": 11.20, "volatility": 0.0004},
+    "EURNOK": {"name": "EUR/NOK", "ticker": "EURNOK=X", "base": 11.40, "volatility": 0.0004},
 }
 
 class MarketSimulator:

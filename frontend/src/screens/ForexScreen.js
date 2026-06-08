@@ -4,17 +4,20 @@ import { TrendingUp, TrendingDown, Globe, Search } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 import { apiService, getCurrencySymbol } from '../utils/api';
 import InteractiveChart from '../components/InteractiveChart';
-import ForexOrderModal from '../components/ForexOrderModal';
 
 export default function ForexScreen() {
-  const { liveTicks, theme } = useApp();
+  const { liveTicks, theme, submitOrder, positions } = useApp();
   const [forexPairs, setForexPairs] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activePair, setActivePair] = useState(null);
   const [candles, setCandles] = useState([]);
   const [activeInterval, setActiveInterval] = useState('1m');
   const [loading, setLoading] = useState(true);
-  const [activeTrade, setActiveTrade] = useState(null); // { symbol, price, type }
+  
+  // Instant Execution State
+  const [quantity, setQuantity] = useState('10');
+  const [executing, setExecuting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState({ type: '', text: '' }); 
 
   const { width: screenWidth } = useWindowDimensions();
   const isDesktop = screenWidth >= 768;
@@ -55,6 +58,47 @@ export default function ForexScreen() {
   const isUp = liveTick.change_percent >= 0;
 
   const filteredPairs = forexPairs.filter(p => p.symbol.toLowerCase().includes(searchQuery.toLowerCase()) || p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+  // Active trades for the current pair to draw on the chart
+  const activeTradesForChart = (positions || [])
+    .filter(p => p.symbol === activePair && Math.abs(p.quantity) > 0)
+    .map(p => ({
+      price: p.average_price,
+      type: p.quantity > 0 ? 'BUY' : 'SELL'
+    }));
+
+  const handleInstantTrade = async (actionType) => {
+    const qty = parseInt(quantity) || 0;
+    if (qty <= 0) {
+      setStatusMessage({ type: 'error', text: 'Enter valid qty' });
+      setTimeout(() => setStatusMessage({ type: '', text: '' }), 2000);
+      return;
+    }
+    
+    setExecuting(true);
+    setStatusMessage({ type: '', text: '' });
+
+    const orderPayload = {
+      symbol: activePair,
+      order_type: 'MARKET',
+      transaction_type: actionType, // 'BUY' or 'SELL'
+      product_type: 'MIS',
+      quantity: qty,
+      price: liveTick.price,
+      trigger_price: null,
+    };
+
+    const res = await submitOrder(orderPayload);
+    setExecuting(false);
+
+    if (res.success) {
+      setStatusMessage({ type: 'success', text: `Success! Active Trade Placed.` });
+      setTimeout(() => setStatusMessage({ type: '', text: '' }), 2000);
+    } else {
+      setStatusMessage({ type: 'error', text: res.error });
+      setTimeout(() => setStatusMessage({ type: '', text: '' }), 3000);
+    }
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -106,11 +150,13 @@ export default function ForexScreen() {
               candles={candles}
               activeInterval={activeInterval}
               onIntervalChange={setActiveInterval}
+              minimalMode={true}
+              activeTrades={activeTradesForChart}
             />
           )}
         </View>
 
-        {/* Binomo Style Trading Panel */}
+        {/* Binomo Style Instant Execution Panel */}
         {activePair && (
           <View style={[styles.tradingPanel, { backgroundColor: theme.card, borderColor: theme.border }, isDesktop && styles.tradingPanelDesktop]}>
             <Text style={[styles.panelTitle, { color: theme.textSecondary }]}>Live Investment</Text>
@@ -126,39 +172,65 @@ export default function ForexScreen() {
               </View>
             </View>
 
+            {/* Instant Trading Inputs */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Investment Qty</Text>
+              <TextInput
+                style={styles.textInput}
+                keyboardType="numeric"
+                value={quantity}
+                onChangeText={setQuantity}
+                placeholder="Qty"
+                placeholderTextColor="#484f58"
+              />
+            </View>
+
+            {/* Execution Status Alert */}
+            {statusMessage.text !== '' && (
+              <View style={[styles.alertBox, statusMessage.type === 'success' ? styles.alertSuccess : styles.alertError]}>
+                <Text style={[styles.alertText, statusMessage.type === 'success' ? styles.textSuccess : styles.textError]}>
+                  {statusMessage.text}
+                </Text>
+              </View>
+            )}
+
+            {/* Instant Action Buttons */}
             <View style={[styles.actionButtonsRow, isDesktop && styles.actionButtonsCol]}>
               <TouchableOpacity 
                 style={[styles.actionBtn, styles.btnUp]}
-                onPress={() => setActiveTrade({ symbol: activePair, price: liveTick.price, type: 'BUY' })}
+                onPress={() => handleInstantTrade('BUY')}
+                disabled={executing}
               >
-                <TrendingUp size={isDesktop ? 48 : 36} color="#ffffff" style={{ marginBottom: 6 }} />
-                <Text style={styles.btnActionText}>UP</Text>
-                <Text style={styles.btnActionSub}>CALL / BUY</Text>
+                {executing ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <>
+                    <TrendingUp size={isDesktop ? 48 : 36} color="#ffffff" style={{ marginBottom: 6 }} />
+                    <Text style={styles.btnActionText}>UP</Text>
+                    <Text style={styles.btnActionSub}>INSTANT CALL</Text>
+                  </>
+                )}
               </TouchableOpacity>
 
               <TouchableOpacity 
                 style={[styles.actionBtn, styles.btnDown]}
-                onPress={() => setActiveTrade({ symbol: activePair, price: liveTick.price, type: 'SELL' })}
+                onPress={() => handleInstantTrade('SELL')}
+                disabled={executing}
               >
-                <TrendingDown size={isDesktop ? 48 : 36} color="#ffffff" style={{ marginBottom: 6 }} />
-                <Text style={styles.btnActionText}>DOWN</Text>
-                <Text style={styles.btnActionSub}>PUT / SELL</Text>
+                {executing ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <>
+                    <TrendingDown size={isDesktop ? 48 : 36} color="#ffffff" style={{ marginBottom: 6 }} />
+                    <Text style={styles.btnActionText}>DOWN</Text>
+                    <Text style={styles.btnActionSub}>INSTANT PUT</Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           </View>
         )}
       </View>
-
-      {/* Custom Forex Execution Modal */}
-      {activeTrade && (
-        <ForexOrderModal
-          visible={!!activeTrade}
-          onClose={() => setActiveTrade(null)}
-          symbol={activeTrade.symbol}
-          initialPrice={activeTrade.price}
-          actionType={activeTrade.type}
-        />
-      )}
     </View>
   );
 }
@@ -284,6 +356,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
+  inputContainer: {
+    marginBottom: 10,
+  },
+  inputLabel: {
+    color: '#808a9d',
+    fontSize: 11,
+    textTransform: 'uppercase',
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  textInput: {
+    backgroundColor: '#0c1017',
+    borderWidth: 1,
+    borderColor: '#ff5722',
+    color: '#ff5722',
+    borderRadius: 12,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    fontSize: 24,
+    fontWeight: 'bold',
+    fontFamily: 'monospace',
+    textAlign: 'center',
+  },
   actionButtonsRow: {
     flexDirection: 'row',
     gap: 15,
@@ -298,8 +394,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 5, // shadow on android
-    boxShadow: '0 4px 14px rgba(0,0,0,0.25)', // shadow on web
+    elevation: 5,
+    boxShadow: '0 4px 14px rgba(0,0,0,0.25)',
   },
   btnUp: {
     backgroundColor: '#26a69a',
@@ -318,6 +414,31 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: 'bold',
     marginTop: 4,
+  },
+  alertBox: {
+    padding: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  alertSuccess: {
+    backgroundColor: 'rgba(38, 166, 154, 0.1)',
+    borderColor: '#26a69a',
+  },
+  alertError: {
+    backgroundColor: 'rgba(239, 83, 80, 0.1)',
+    borderColor: '#ef5350',
+  },
+  alertText: {
+    fontSize: 12,
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  textSuccess: {
+    color: '#26a69a',
+  },
+  textError: {
+    color: '#ef5350',
   },
   textGreen: {
     color: '#26a69a',

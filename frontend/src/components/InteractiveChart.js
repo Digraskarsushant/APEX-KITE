@@ -4,7 +4,7 @@ import Svg, { Rect, Line, Path, Polygon, G, Text as SvgText, Defs, LinearGradien
 import { apiService } from '../utils/api';
 import { useApp } from '../context/AppContext';
 
-export default function InteractiveChart({ candles = [], activeInterval = '1m', onIntervalChange }) {
+export default function InteractiveChart({ candles = [], activeInterval = '1m', onIntervalChange, minimalMode = false, activeTrades = [] }) {
   const { theme, settings } = useApp();
   const [chartType, setChartType] = useState(settings?.defaultChartMode || 'candle'); // 'candle' | 'line'
   const [showEMA9, setShowEMA9] = useState(true);
@@ -23,10 +23,17 @@ export default function InteractiveChart({ candles = [], activeInterval = '1m', 
 
   // Synchronize with global settings layout mode
   useEffect(() => {
-    if (settings?.defaultChartMode) {
+    if (minimalMode) {
+      setChartType('line');
+      setShowEMA9(false);
+      setShowEMA21(false);
+      setShowBB(false);
+      setShowRSI(false);
+      setShowMACD(false);
+    } else if (settings?.defaultChartMode) {
       setChartType(settings.defaultChartMode);
     }
-  }, [settings?.defaultChartMode]);
+  }, [settings?.defaultChartMode, minimalMode]);
 
   // Synchronize simulator status on mount
   useEffect(() => {
@@ -472,8 +479,47 @@ export default function InteractiveChart({ candles = [], activeInterval = '1m', 
       );
     }
 
+    // --- 9. Active Trade Lines (Binomo Style) ---
+    if (activeTrades && activeTrades.length > 0) {
+      activeTrades.forEach((trade, idx) => {
+        const tradeY = getY(trade.price);
+        const color = trade.type === 'BUY' ? '#26a69a' : '#ef5350';
+        shapes.push(
+          <Line 
+            key={`trade-${idx}`} 
+            x1={getX(0)} 
+            y1={tradeY} 
+            x2={chartWidth - 60} 
+            y2={tradeY} 
+            stroke={color} 
+            strokeWidth={2} 
+            strokeDasharray="4,4" 
+          />,
+          <Rect 
+            key={`trade-bg-${idx}`}
+            x={chartWidth - 60}
+            y={tradeY - 10}
+            width={60}
+            height={20}
+            fill={color}
+            rx={4}
+          />,
+          <SvgText 
+            key={`trade-lbl-${idx}`}
+            x={chartWidth - 55}
+            y={tradeY + 4}
+            fill="#ffffff"
+            fontSize={9}
+            fontWeight="bold"
+          >
+            {trade.type}
+          </SvgText>
+        );
+      });
+    }
+
     return shapes;
-  }, [visibleCandles, scales, chartType, showEMA9, showEMA21, showBB, showRSI, showMACD, hoverIndex, chartWidth]);
+  }, [visibleCandles, scales, chartType, showEMA9, showEMA21, showBB, showRSI, showMACD, hoverIndex, chartWidth, activeTrades]);
 
   // X Axis and Y Axis grid labels
   const gridLines = useMemo(() => {
@@ -637,34 +683,36 @@ export default function InteractiveChart({ candles = [], activeInterval = '1m', 
         </Svg>
       </View>
 
-      {/* 3. Controls Pane (Toggles for styles, scales, subplots) */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.controlsBar}>
-        {/* Toggle Chart Type */}
-        <TouchableOpacity style={[styles.controlBtn, { backgroundColor: theme.isDark ? '#21262d' : '#ffffff', borderColor: theme.border }]} onPress={() => setChartType(prev => prev === 'candle' ? 'line' : 'candle')}>
-          <Text style={[styles.controlText, { color: theme.text }]}>Type: {chartType === 'candle' ? 'Candles 🕯️' : 'Line 📈'}</Text>
-        </TouchableOpacity>
+      {/* 3. Controls Pane (Toggles for styles, scales, subplots) - Hidden in Minimal Mode */}
+      {!minimalMode && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.controlsBar}>
+          {/* Toggle Chart Type */}
+          <TouchableOpacity style={[styles.controlBtn, { backgroundColor: theme.isDark ? '#21262d' : '#ffffff', borderColor: theme.border }]} onPress={() => setChartType(prev => prev === 'candle' ? 'line' : 'candle')}>
+            <Text style={[styles.controlText, { color: theme.text }]}>Type: {chartType === 'candle' ? 'Candles 🕯️' : 'Line 📈'}</Text>
+          </TouchableOpacity>
 
-        {/* Toggles for Indicators */}
-        <TouchableOpacity style={[styles.controlBtn, { backgroundColor: theme.isDark ? '#21262d' : '#ffffff', borderColor: theme.border }, showEMA9 && styles.controlBtnActive, showEMA9 && { borderColor: theme.accent }]} onPress={() => setShowEMA9(!showEMA9)}>
-          <Text style={[styles.controlText, { color: theme.text }, showEMA9 && styles.textActive]}>EMA 9</Text>
-        </TouchableOpacity>
+          {/* Toggles for Indicators */}
+          <TouchableOpacity style={[styles.controlBtn, { backgroundColor: theme.isDark ? '#21262d' : '#ffffff', borderColor: theme.border }, showEMA9 && styles.controlBtnActive, showEMA9 && { borderColor: theme.accent }]} onPress={() => setShowEMA9(!showEMA9)}>
+            <Text style={[styles.controlText, { color: theme.text }, showEMA9 && styles.textActive]}>EMA 9</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.controlBtn, { backgroundColor: theme.isDark ? '#21262d' : '#ffffff', borderColor: theme.border }, showEMA21 && styles.controlBtnActive, showEMA21 && { borderColor: theme.accent }]} onPress={() => setShowEMA21(!showEMA21)}>
-          <Text style={[styles.controlText, { color: theme.text }, showEMA21 && styles.textActive]}>EMA 21</Text>
-        </TouchableOpacity>
+          <TouchableOpacity style={[styles.controlBtn, { backgroundColor: theme.isDark ? '#21262d' : '#ffffff', borderColor: theme.border }, showEMA21 && styles.controlBtnActive, showEMA21 && { borderColor: theme.accent }]} onPress={() => setShowEMA21(!showEMA21)}>
+            <Text style={[styles.controlText, { color: theme.text }, showEMA21 && styles.textActive]}>EMA 21</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.controlBtn, { backgroundColor: theme.isDark ? '#21262d' : '#ffffff', borderColor: theme.border }, showBB && styles.controlBtnActive, showBB && { borderColor: theme.accent }]} onPress={() => setShowBB(!showBB)}>
-          <Text style={[styles.controlText, { color: theme.text }, showBB && styles.textActive]}>Bollinger Bands</Text>
-        </TouchableOpacity>
+          <TouchableOpacity style={[styles.controlBtn, { backgroundColor: theme.isDark ? '#21262d' : '#ffffff', borderColor: theme.border }, showBB && styles.controlBtnActive, showBB && { borderColor: theme.accent }]} onPress={() => setShowBB(!showBB)}>
+            <Text style={[styles.controlText, { color: theme.text }, showBB && styles.textActive]}>Bollinger Bands</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.controlBtn, { backgroundColor: theme.isDark ? '#21262d' : '#ffffff', borderColor: theme.border }, showRSI && styles.controlBtnActive, showRSI && { borderColor: theme.accent }]} onPress={() => setShowRSI(!showRSI)}>
-          <Text style={[styles.controlText, { color: theme.text }, showRSI && styles.textActive]}>RSI Subplot</Text>
-        </TouchableOpacity>
+          <TouchableOpacity style={[styles.controlBtn, { backgroundColor: theme.isDark ? '#21262d' : '#ffffff', borderColor: theme.border }, showRSI && styles.controlBtnActive, showRSI && { borderColor: theme.accent }]} onPress={() => setShowRSI(!showRSI)}>
+            <Text style={[styles.controlText, { color: theme.text }, showRSI && styles.textActive]}>RSI Subplot</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.controlBtn, { backgroundColor: theme.isDark ? '#21262d' : '#ffffff', borderColor: theme.border }, showMACD && styles.controlBtnActive, showMACD && { borderColor: theme.accent }]} onPress={() => setShowMACD(!showMACD)}>
-          <Text style={[styles.controlText, { color: theme.text }, showMACD && styles.textActive]}>MACD Subplot</Text>
-        </TouchableOpacity>
-      </ScrollView>
+          <TouchableOpacity style={[styles.controlBtn, { backgroundColor: theme.isDark ? '#21262d' : '#ffffff', borderColor: theme.border }, showMACD && styles.controlBtnActive, showMACD && { borderColor: theme.accent }]} onPress={() => setShowMACD(!showMACD)}>
+            <Text style={[styles.controlText, { color: theme.text }, showMACD && styles.textActive]}>MACD Subplot</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      )}
 
       {/* 4. Time Intervals Selection */}
       <View style={[styles.intervalBar, { borderColor: theme.border }]}>

@@ -125,13 +125,7 @@ function MainAppContent() {
               <Text style={[styles.desktopTabText, { color: theme.textSecondary }, activeScreen === 'watchlist' && styles.desktopTabTextActive]}>Watchlist</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.desktopTab, activeScreen === 'forex' && styles.desktopTabActive, activeScreen === 'forex' && { backgroundColor: theme.background, borderColor: theme.border }]}
-              onPress={() => setActiveScreen('forex')}
-            >
-              <Globe size={14} color={activeScreen === 'forex' ? '#ff5722' : theme.textSecondary} />
-              <Text style={[styles.desktopTabText, { color: theme.textSecondary }, activeScreen === 'forex' && styles.desktopTabTextActive]}>Forex</Text>
-            </TouchableOpacity>
+
 
             <TouchableOpacity
               style={[styles.desktopTab, activeScreen === 'portfolio' && styles.desktopTabActive, activeScreen === 'portfolio' && { backgroundColor: theme.background, borderColor: theme.border }]}
@@ -184,13 +178,7 @@ function MainAppContent() {
             <Text style={[styles.mobileTabText, { color: theme.textSecondary }, activeScreen === 'watchlist' && styles.mobileTabTextActive]}>Watchlist</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.mobileTab, activeScreen === 'forex' && styles.mobileTabActive]}
-            onPress={() => setActiveScreen('forex')}
-          >
-            <Globe size={18} color={activeScreen === 'forex' ? '#ff5722' : theme.textSecondary} />
-            <Text style={[styles.mobileTabText, { color: theme.textSecondary }, activeScreen === 'forex' && styles.mobileTabTextActive]}>Forex</Text>
-          </TouchableOpacity>
+
 
           <TouchableOpacity
             style={[styles.mobileTab, activeScreen === 'portfolio' && styles.mobileTabActive]}

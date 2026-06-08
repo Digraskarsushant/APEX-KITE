@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, ScrollView } from 'react-native';
-import { Search, Plus, Check, Star, TrendingUp, TrendingDown, ArrowUpRight } from 'lucide-react-native';
+import { Search, Plus, Check, Star, TrendingUp, TrendingDown, ArrowUpRight, X } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 import { apiService, getCurrencySymbol } from '../utils/api';
 import OrderModal from '../components/OrderModal';
@@ -168,6 +168,11 @@ export default function WatchlistScreen({ onNavigateToDetail }) {
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearIcon}>
+            <X color={theme.textSecondary} size={16} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Conditional: Search results overlay or regular watchlist */}
@@ -249,6 +254,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     paddingVertical: 10,
     outlineStyle: 'none', // clean border removal on web
+  },
+  clearIcon: {
+    padding: 4,
+    marginLeft: 4,
   },
   listContainer: {
     flex: 1,

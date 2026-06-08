@@ -17,17 +17,17 @@ function ApexLogo({ isDark }) {
     <View style={styles.logoContainer}>
       <Svg width={90} height={90} viewBox="0 0 100 100">
         {/* Left Top Quadrant */}
-        <Polygon points="50,10 15,45 50,45" fill={leftTop} />
+        <Polygon points="50,10 15,45 50,45" fill={leftTop} stroke={leftTop} strokeWidth="1" strokeLinejoin="round" />
         {/* Right Top Quadrant */}
-        <Polygon points="50,10 85,45 50,45" fill={rightTop} />
+        <Polygon points="50,10 85,45 50,45" fill={rightTop} stroke={rightTop} strokeWidth="1" strokeLinejoin="round" />
         {/* Left Bottom Quadrant */}
-        <Polygon points="50,95 15,45 50,45" fill={leftBottom} />
+        <Polygon points="50,95 15,45 50,45" fill={leftBottom} stroke={leftBottom} strokeWidth="1" strokeLinejoin="round" />
         {/* Right Bottom Quadrant */}
-        <Polygon points="50,95 85,45 50,45" fill={rightBottom} />
+        <Polygon points="50,95 85,45 50,45" fill={rightBottom} stroke={rightBottom} strokeWidth="1" strokeLinejoin="round" />
         
         {/* Center lines for origami fold effect */}
-        <Path d="M50,10 L50,95" stroke={accent} strokeWidth="1.5" strokeOpacity="0.4" />
-        <Path d="M15,45 L85,45" stroke={accent} strokeWidth="1.5" strokeOpacity="0.4" />
+        <Path d="M50,10 L50,95" stroke={accent} strokeWidth="1.5" strokeOpacity="0.4" strokeLinecap="round" />
+        <Path d="M15,45 L85,45" stroke={accent} strokeWidth="1.5" strokeOpacity="0.4" strokeLinecap="round" />
       </Svg>
     </View>
   );

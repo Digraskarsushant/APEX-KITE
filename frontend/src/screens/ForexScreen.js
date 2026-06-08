@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, useWindowDimensions } from 'react-native';
-import { TrendingUp, TrendingDown, Globe } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, useWindowDimensions, TextInput } from 'react-native';
+import { TrendingUp, TrendingDown, Globe, Search } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 import { apiService, getCurrencySymbol } from '../utils/api';
 import InteractiveChart from '../components/InteractiveChart';
-import OrderModal from '../components/OrderModal';
+import ForexOrderModal from '../components/ForexOrderModal';
 
 export default function ForexScreen() {
   const { liveTicks, theme } = useApp();
   const [forexPairs, setForexPairs] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [activePair, setActivePair] = useState(null);
   const [candles, setCandles] = useState([]);
   const [activeInterval, setActiveInterval] = useState('1m');
@@ -53,13 +54,27 @@ export default function ForexScreen() {
   const liveTick = liveTicks[activePair] || { price: 0, change_percent: 0, change: 0 };
   const isUp = liveTick.change_percent >= 0;
 
+  const filteredPairs = forexPairs.filter(p => p.symbol.toLowerCase().includes(searchQuery.toLowerCase()) || p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
+      {/* Search Bar */}
+      <View style={[styles.searchContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
+        <Search color={theme.textSecondary} size={18} />
+        <TextInput
+          style={[styles.searchInput, { color: theme.text }]}
+          placeholder="Search Forex (e.g., JPY, EUR)"
+          placeholderTextColor={theme.textSecondary}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
+
       {/* Top Strip: Asset Selector */}
       <View style={[styles.topStrip, { backgroundColor: theme.card, borderColor: theme.border }]}>
         <Globe size={18} color={theme.accent} style={{ marginRight: 15, marginLeft: 10 }} />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.assetScroller}>
-          {forexPairs.map((pair) => {
+          {filteredPairs.map((pair) => {
             const pairTick = liveTicks[pair.symbol] || { price: 0, change_percent: 0 };
             const isActive = pair.symbol === activePair;
             return (
@@ -134,14 +149,14 @@ export default function ForexScreen() {
         )}
       </View>
 
-      {/* Order Execution Modal */}
+      {/* Custom Forex Execution Modal */}
       {activeTrade && (
-        <OrderModal
+        <ForexOrderModal
           visible={!!activeTrade}
           onClose={() => setActiveTrade(null)}
           symbol={activeTrade.symbol}
           initialPrice={activeTrade.price}
-          initialAction={activeTrade.type}
+          actionType={activeTrade.type}
         />
       )}
     </View>
@@ -152,6 +167,21 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0c1017',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#161b22',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderColor: '#30363d',
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 10,
+    color: '#c9d1d9',
+    fontSize: 14,
   },
   topStrip: {
     flexDirection: 'row',

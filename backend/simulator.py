@@ -280,8 +280,8 @@ class MarketSimulator:
         thread.start()
 
     def _background_yfinance_download(self):
-        """Downloads historical data in the background and gracefully replaces mock data."""
-        print("Starting background download of real Yahoo Finance data...")
+        """Downloads historical data in the background and gracefully replaces mock data using batched downloads."""
+        print("Starting batch background download of real Yahoo Finance data...")
         now = datetime.datetime.now()
         
         # Initialize real-time exchange rates from Yahoo Finance
@@ -297,127 +297,115 @@ class MarketSimulator:
             print(f"Real-time exchange rates loaded successfully: {self.exchange_rates}")
         except Exception as rate_ex:
             print(f"Failed to load real-time exchange rates on background init: {rate_ex}.")
-            
+
+        tickers_list = [info["ticker"] for symbol, info in STOCK_CONFIG.items()]
+        tickers_str = " ".join(tickers_list)
+
+        try:
+            print("Batch downloading 1d candles...")
+            df_1d_batch = yf.download(tickers=tickers_str, period="1y", interval="1d", group_by="ticker", progress=False)
+            print("Batch downloading 5m candles...")
+            df_5m_batch = yf.download(tickers=tickers_str, period="5d", interval="5m", group_by="ticker", progress=False)
+            print("Batch downloading 1m candles...")
+            df_1m_batch = yf.download(tickers=tickers_str, period="1d", interval="1m", group_by="ticker", progress=False)
+            print("Batch downloading 1mo candles...")
+            df_1mo_batch = yf.download(tickers=tickers_str, period="max", interval="1mo", group_by="ticker", progress=False)
+            print("Batch downloading max weekly candles...")
+            df_max_batch = yf.download(tickers=tickers_str, period="max", interval="1wk", group_by="ticker", progress=False)
+        except Exception as e:
+            print(f"Batch yfinance download failed entirely: {e}. Keeping mock data.")
+            return
+
+        is_multiindex = isinstance(df_1d_batch.columns, pd.MultiIndex)
+
         for symbol, info in STOCK_CONFIG.items():
             yahoo_symbol = info["ticker"]
-            
             success = False
-            temp_candles = {
-                "1m": [], "5m": [], "1d": [], "1mo": [], "1y": [], "max": []
-            }
+            temp_candles = { "1m": [], "5m": [], "1d": [], "1mo": [], "1y": [], "max": [] }
+            
             try:
-                # 1. Fetch Daily Candles (1y period, 1d interval)
-                print(f"[{symbol}] Background downloading 1d candles from Yahoo Finance ({yahoo_symbol})...")
-                ticker = yf.Ticker(yahoo_symbol)
-                df_1d = ticker.history(period="1y", interval="1d")
-                
-                # 2. Fetch 5m Candles (5d period, 5m interval)
-                print(f"[{symbol}] Background downloading 5m candles from Yahoo Finance ({yahoo_symbol})...")
-                df_5m = ticker.history(period="5d", interval="5m")
-                
-                # 3. Fetch 1m Candles (1d period, 1m interval)
-                print(f"[{symbol}] Background downloading 1m candles from Yahoo Finance ({yahoo_symbol})...")
-                df_1m = ticker.history(period="1d", interval="1m")
-
-                # 4. Fetch Monthly Candles (max period, 1mo interval)
-                print(f"[{symbol}] Background downloading 1mo candles from Yahoo Finance ({yahoo_symbol})...")
-                df_1mo = ticker.history(period="max", interval="1mo")
-                
-                # 5. Fetch Weekly Candles (max period, 1wk interval) for lifetime chart
-                print(f"[{symbol}] Background downloading max weekly candles from Yahoo Finance ({yahoo_symbol})...")
-                df_max = ticker.history(period="max", interval="1wk")
+                if is_multiindex:
+                    if yahoo_symbol in df_1d_batch:
+                        df_1d = df_1d_batch[yahoo_symbol]
+                        df_5m = df_5m_batch[yahoo_symbol]
+                        df_1m = df_1m_batch[yahoo_symbol]
+                        df_1mo = df_1mo_batch[yahoo_symbol]
+                        df_max = df_max_batch[yahoo_symbol]
+                    else:
+                        raise ValueError(f"{yahoo_symbol} missing from batch")
+                else:
+                    df_1d = df_1d_batch
+                    df_5m = df_5m_batch
+                    df_1m = df_1m_batch
+                    df_1mo = df_1mo_batch
+                    df_max = df_max_batch
                 
                 if not df_1d.empty and not df_5m.empty and not df_1m.empty and not df_1mo.empty and not df_max.empty:
-                    # Clean and parse 1d candles
-                    df_1d = df_1d.dropna(subset=['Open', 'High', 'Low', 'Close'])
+                    df_1d = df_1d.dropna(subset=['Close'])
                     for idx, row in df_1d.iterrows():
                         temp_candles["1d"].append({
                             "time": idx.strftime("%Y-%m-%d"),
-                            "open": round(float(row['Open']), 2),
-                            "high": round(float(row['High']), 2),
-                            "low": round(float(row['Low']), 2),
-                            "close": round(float(row['Close']), 2),
-                            "volume": int(row['Volume']) if not pd.isna(row['Volume']) else 0
-                        })
-                        
-                    # Clean and parse 5m candles
-                    df_5m = df_5m.dropna(subset=['Open', 'High', 'Low', 'Close'])
-                    for idx, row in df_5m.iterrows():
-                        temp_candles["5m"].append({
-                            "time": idx.strftime("%Y-%m-%d %H:%M:%S"),
-                            "open": round(float(row['Open']), 2),
-                            "high": round(float(row['High']), 2),
-                            "low": round(float(row['Low']), 2),
-                            "close": round(float(row['Close']), 2),
-                            "volume": int(row['Volume']) if not pd.isna(row['Volume']) else 0
-                        })
-                        
-                    # Clean and parse 1m candles
-                    df_1m = df_1m.dropna(subset=['Open', 'High', 'Low', 'Close'])
-                    for idx, row in df_1m.iterrows():
-                        temp_candles["1m"].append({
-                            "time": idx.strftime("%Y-%m-%d %H:%M:%S"),
-                            "open": round(float(row['Open']), 2),
-                            "high": round(float(row['High']), 2),
-                            "low": round(float(row['Low']), 2),
-                            "close": round(float(row['Close']), 2),
+                            "open": round(float(row['Open']), 2), "high": round(float(row['High']), 2),
+                            "low": round(float(row['Low']), 2), "close": round(float(row['Close']), 2),
                             "volume": int(row['Volume']) if not pd.isna(row['Volume']) else 0
                         })
 
-                    # Clean and parse 1mo candles
-                    df_1mo = df_1mo.dropna(subset=['Open', 'High', 'Low', 'Close'])
+                    df_5m = df_5m.dropna(subset=['Close'])
+                    for idx, row in df_5m.iterrows():
+                        temp_candles["5m"].append({
+                            "time": idx.strftime("%Y-%m-%d %H:%M:%S"),
+                            "open": round(float(row['Open']), 2), "high": round(float(row['High']), 2),
+                            "low": round(float(row['Low']), 2), "close": round(float(row['Close']), 2),
+                            "volume": int(row['Volume']) if not pd.isna(row['Volume']) else 0
+                        })
+
+                    df_1m = df_1m.dropna(subset=['Close'])
+                    for idx, row in df_1m.iterrows():
+                        temp_candles["1m"].append({
+                            "time": idx.strftime("%Y-%m-%d %H:%M:%S"),
+                            "open": round(float(row['Open']), 2), "high": round(float(row['High']), 2),
+                            "low": round(float(row['Low']), 2), "close": round(float(row['Close']), 2),
+                            "volume": int(row['Volume']) if not pd.isna(row['Volume']) else 0
+                        })
+
+                    df_1mo = df_1mo.dropna(subset=['Close'])
                     for idx, row in df_1mo.iterrows():
                         temp_candles["1mo"].append({
                             "time": idx.strftime("%Y-%m-%d"),
-                            "open": round(float(row['Open']), 2),
-                            "high": round(float(row['High']), 2),
-                            "low": round(float(row['Low']), 2),
-                            "close": round(float(row['Close']), 2),
+                            "open": round(float(row['Open']), 2), "high": round(float(row['High']), 2),
+                            "low": round(float(row['Low']), 2), "close": round(float(row['Close']), 2),
                             "volume": int(row['Volume']) if not pd.isna(row['Volume']) else 0
                         })
-                        
-                    # Clean and parse 1y candles (resampled from 1mo)
-                    df_1y = df_1mo.groupby(df_1mo.index.year).agg({
-                        'Open': 'first',
-                        'High': 'max',
-                        'Low': 'min',
-                        'Close': 'last',
-                        'Volume': 'sum'
-                    })
+
+                    df_1y = df_1mo.groupby(df_1mo.index.year).agg({'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'})
                     for year, row in df_1y.iterrows():
                         temp_candles["1y"].append({
                             "time": f"{year}-01-01",
-                            "open": round(float(row['Open']), 2),
-                            "high": round(float(row['High']), 2),
-                            "low": round(float(row['Low']), 2),
-                            "close": round(float(row['Close']), 2),
+                            "open": round(float(row['Open']), 2), "high": round(float(row['High']), 2),
+                            "low": round(float(row['Low']), 2), "close": round(float(row['Close']), 2),
                             "volume": int(row['Volume']) if not pd.isna(row['Volume']) else 0
                         })
-                        
-                    # Clean and parse max candles
-                    df_max = df_max.dropna(subset=['Open', 'High', 'Low', 'Close'])
+
+                    df_max = df_max.dropna(subset=['Close'])
                     for idx, row in df_max.iterrows():
                         temp_candles["max"].append({
                             "time": idx.strftime("%Y-%m-%d"),
-                            "open": round(float(row['Open']), 2),
-                            "high": round(float(row['High']), 2),
-                            "low": round(float(row['Low']), 2),
-                            "close": round(float(row['Close']), 2),
+                            "open": round(float(row['Open']), 2), "high": round(float(row['High']), 2),
+                            "low": round(float(row['Low']), 2), "close": round(float(row['Close']), 2),
                             "volume": int(row['Volume']) if not pd.isna(row['Volume']) else 0
                         })
                     
-                    success = True
-                    print(f"[{symbol}] Successfully loaded yfinance historical data in background.")
+                    if len(temp_candles["1m"]) > 0:
+                        success = True
+                        print(f"[{symbol}] Successfully mapped batched yfinance data.")
             except Exception as e:
-                print(f"[{symbol}] Failed to download yfinance data in background: {e}. Keeping mock data.")
+                print(f"[{symbol}] Failed to map batched yfinance data: {e}")
             
             if success:
                 self.failed_symbols.discard(symbol)
-                # Atomically swap the real data in
                 self.candles[symbol] = temp_candles
                 
-                # Update current tick and reference price based on real data
-                latest_close = self.candles[symbol]["1m"][-1]["close"] if self.candles[symbol]["1m"] else info.get("base", 100.0)
+                latest_close = self.candles[symbol]["1m"][-1]["close"]
                 daily_open = self.candles[symbol]["1d"][-1]["open"] if self.candles[symbol]["1d"] else latest_close
                 daily_close_prev = self.candles[symbol]["1d"][-2]["close"] if len(self.candles[symbol]["1d"]) > 1 else daily_open
                 
@@ -425,16 +413,11 @@ class MarketSimulator:
                 change_pct = (change / daily_close_prev) * 100 if daily_close_prev > 0 else 0.0
                 
                 self.current_ticks[symbol] = {
-                    "symbol": symbol,
-                    "name": info["name"],
-                    "price": latest_close,
-                    "change": round(change, 2),
-                    "change_percent": round(change_pct, 2),
-                    "open": daily_open,
-                    "high": max([c["high"] for c in self.candles[symbol]["1m"][-60:]]) if self.candles[symbol]["1m"] else latest_close,
-                    "low": min([c["low"] for c in self.candles[symbol]["1m"][-60:]]) if self.candles[symbol]["1m"] else latest_close,
-                    "close": latest_close,
-                    "volume": sum([c["volume"] for c in self.candles[symbol]["1m"][-60:]]) if self.candles[symbol]["1m"] else 0,
+                    "symbol": symbol, "name": info["name"], "price": latest_close,
+                    "change": round(change, 2), "change_percent": round(change_pct, 2),
+                    "open": daily_open, "high": max([c["high"] for c in self.candles[symbol]["1m"][-60:]]),
+                    "low": min([c["low"] for c in self.candles[symbol]["1m"][-60:]]), "close": latest_close,
+                    "volume": sum([c["volume"] for c in self.candles[symbol]["1m"][-60:]]),
                     "timestamp": now.strftime("%Y-%m-%d %H:%M:%S")
                 }
                 self.stocks[symbol] = latest_close

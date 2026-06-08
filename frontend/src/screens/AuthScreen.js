@@ -1,40 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Dimensions, Modal } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Dimensions, Modal, Image } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
 import { User, Lock, Mail, ChevronRight, Info, ShieldCheck, RefreshCw, X, Eye, EyeOff } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 
-// Beautiful upward helix exponential logo drawn in SVG
-function ApexLogo() {
+// Professional App Logo
+function ApexLogo({ isDark }) {
   return (
     <View style={styles.logoContainer}>
-      <Svg width={90} height={90} viewBox="0 0 100 100">
-        <Defs>
-          <LinearGradient id="logoGrad" x1="0" y1="1" x2="1" y2="0">
-            <Stop offset="0%" stopColor="#ff9800" />
-            <Stop offset="100%" stopColor="#ff5722" />
-          </LinearGradient>
-        </Defs>
-        {/* Double-helix upward financial trend arrows */}
-        <Path
-          d="M20,80 Q40,40 60,60 T100,20"
-          fill="none"
-          stroke="url(#logoGrad)"
-          strokeWidth="6"
-          strokeLinecap="round"
-        />
-        <Path
-          d="M10,90 Q30,50 50,70 T90,30"
-          fill="none"
-          stroke="rgba(255, 87, 34, 0.3)"
-          strokeWidth="4"
-          strokeLinecap="round"
-          strokeDasharray="4,4"
-        />
-        {/* Glowing node point at apex arrow */}
-        <Circle cx="100" cy="20" r="6" fill="#ff5722" />
-        <Circle cx="90" cy="30" r="4" fill="#ff9800" />
-      </Svg>
+      <Image 
+        source={isDark ? require('../../assets/icon-dark.png') : require('../../assets/icon.png')} 
+        style={{ width: 90, height: 90, borderRadius: 20 }} 
+        resizeMode="contain"
+      />
     </View>
   );
 }
@@ -95,7 +73,7 @@ export default function AuthScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.glassCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
         {/* Branding header */}
-        <ApexLogo />
+        <ApexLogo isDark={theme.isDark} />
         <Text style={[styles.brandTitle, { color: theme.text }]}>APEX KITE</Text>
         <Text style={[styles.brandSubtitle, { color: theme.textSecondary }]}>High-Frequency Trading Terminal Suite</Text>
 

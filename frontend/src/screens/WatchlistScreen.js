@@ -79,11 +79,12 @@ export default function WatchlistScreen({ onNavigateToDetail }) {
     }
   }, [liveTicks]);
 
-  // Filter search results
+  // Filter search results, excluding Forex pairs
   const filteredStocks = allStocks.filter(
     (s) =>
-      s.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.name.toLowerCase().includes(searchQuery.toLowerCase())
+      !s.name.includes('/') && // Exclude Forex
+      (s.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.name.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const handleRowClick = (symbol) => {
@@ -209,7 +210,7 @@ export default function WatchlistScreen({ onNavigateToDetail }) {
             </View>
           ) : (
             <FlatList
-              data={allStocks.filter((s) => watchlist.includes(s.symbol))}
+              data={allStocks.filter((s) => watchlist.includes(s.symbol) && !s.name.includes('/'))}
               keyExtractor={(item) => `watchlist-${item.symbol}`}
               renderItem={renderStockItem}
             />

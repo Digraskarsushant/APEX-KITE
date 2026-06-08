@@ -35,8 +35,8 @@ export default function ForexScreen({ onNavigateToDetail }) {
     const fetchStocksList = async () => {
       try {
         const stocks = await apiService.searchStocks();
-        // Filter ONLY Forex pairs (those ending in =X)
-        const fx = stocks.filter(s => s.symbol.endsWith('=X'));
+        // Filter ONLY Forex pairs (those with '/' in their name like 'EUR/USD')
+        const fx = stocks.filter(s => s.name.includes('/'));
         setForexPairs(fx);
       } catch (e) {
         console.error('Failed to load forex list:', e);
@@ -51,7 +51,9 @@ export default function ForexScreen({ onNavigateToDetail }) {
     let hasChanges = false;
     
     Object.keys(liveTicks).forEach((symbol) => {
-      if (!symbol.endsWith('=X')) return; // Only flash for forex
+      // Fast check to only flash for forex pairs (which have 6 letters and no dots usually, or we just flash all that are in forexPairs)
+      // Since we want to be safe, we just process ticks if they exist in forexPairs
+      if (!forexPairs.some(f => f.symbol === symbol)) return;
       
       const currentPrice = liveTicks[symbol]?.price;
       const prevPrice = prevPrices.current[symbol];
@@ -104,7 +106,7 @@ export default function ForexScreen({ onNavigateToDetail }) {
       <View style={[styles.rowWrapper, { backgroundColor: theme.card, borderColor: theme.border }]}>
         <TouchableOpacity style={styles.mainRow} onPress={() => handleRowClick(item.symbol)}>
           <View style={styles.symbolSection}>
-            <Text style={[styles.symbolText, { color: theme.text }]}>{item.symbol.replace('=X', '')}</Text>
+            <Text style={[styles.symbolText, { color: theme.text }]}>{item.symbol}</Text>
             <Text style={[styles.companyText, { color: theme.textSecondary }]} numberOfLines={1}>
               {item.name}
             </Text>

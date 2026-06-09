@@ -332,22 +332,23 @@ class MarketSimulator:
                             
                         if not df_sym.empty:
                             df_sym = df_sym.dropna(subset=['Close']).tail(tail_limit)
-                            for idx, row in df_sym.iterrows():
-                                time_str = idx.strftime("%Y-%m-%d %H:%M:%S") if interval in ["1m", "5m"] else idx.strftime("%Y-%m-%d")
-                                if target_dict_key == "1mo":
-                                    time_str = idx.strftime("%Y-%m-%d")
-                                elif target_dict_key == "max":
-                                    time_str = idx.strftime("%Y-%m-%d")
+                            if not df_sym.empty:
+                                for idx, row in df_sym.iterrows():
+                                    time_str = idx.strftime("%Y-%m-%d %H:%M:%S") if interval in ["1m", "5m"] else idx.strftime("%Y-%m-%d")
+                                    if target_dict_key == "1mo":
+                                        time_str = idx.strftime("%Y-%m-%d")
+                                    elif target_dict_key == "max":
+                                        time_str = idx.strftime("%Y-%m-%d")
+                                    
+                                    all_temp_candles[symbol][target_dict_key].append({
+                                        "time": time_str,
+                                        "open": round(float(row['Open']), 2), "high": round(float(row['High']), 2),
+                                        "low": round(float(row['Low']), 2), "close": round(float(row['Close']), 2),
+                                        "volume": int(row['Volume']) if not pd.isna(row['Volume']) else 0
+                                    })
                                 
-                                all_temp_candles[symbol][target_dict_key].append({
-                                    "time": time_str,
-                                    "open": round(float(row['Open']), 2), "high": round(float(row['High']), 2),
-                                    "low": round(float(row['Low']), 2), "close": round(float(row['Close']), 2),
-                                    "volume": int(row['Volume']) if not pd.isna(row['Volume']) else 0
-                                })
-                            
-                            if target_dict_key == "1d":
-                                success_flags[symbol] = True
+                                if target_dict_key == "1d":
+                                    success_flags[symbol] = True
                     except Exception as e:
                         print(f"[{symbol}] Failed processing {interval}: {e}")
                 
@@ -402,8 +403,11 @@ class MarketSimulator:
                     latest_close = self.candles[symbol]["1m"][-1]["close"]
                 elif self.candles[symbol]["5m"]:
                     latest_close = self.candles[symbol]["5m"][-1]["close"]
-                else:
+                elif self.candles[symbol]["1d"]:
                     latest_close = self.candles[symbol]["1d"][-1]["close"]
+                else:
+                    self.failed_symbols.add(symbol)
+                    continue
 
                 daily_open = self.candles[symbol]["1d"][-1]["open"] if self.candles[symbol]["1d"] else latest_close
                 daily_close_prev = self.candles[symbol]["1d"][-2]["close"] if len(self.candles[symbol]["1d"]) > 1 else daily_open

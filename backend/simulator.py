@@ -1,3 +1,4 @@
+import logging
 import time
 import random
 import datetime
@@ -6,6 +7,9 @@ import math
 from typing import List, Dict, Any
 import yfinance as yf
 import pandas as pd
+
+# Suppress yfinance spam output (e.g., RateLimitError prints)
+logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
 # --- Black-Scholes Options Pricing Engine helpers ---
 def norm_cdf(x: float) -> float:
@@ -580,11 +584,11 @@ class MarketSimulator:
 
     def _polling_loop(self):
         """Background polling loop executing batched Yahoo Finance downloads."""
-        print("Starting Yahoo Finance background poller thread...")
+        print("Starting Yahoo Finance background poller thread (Updates every 120 seconds)...")
         while True:
             try:
-                # Wait 15 seconds between queries to prevent Yahoo rate-limiting
-                time.sleep(15)
+                # Wait 120 seconds between queries to strictly prevent Yahoo rate-limiting
+                time.sleep(120)
                 self.fetch_latest_prices()
             except Exception as e:
                 print(f"Error in Yahoo Finance background poller: {e}")

@@ -39,11 +39,11 @@ COPY backend/ ./backend/
 # Copy the compiled React static files from Stage 1 directly beside main.py
 COPY --from=frontend-builder /app/frontend/dist ./backend/dist
 
-# Expose server port
+# Expose server port (mostly for local reference)
 EXPOSE 8000
 
 # Set running directory to the backend folder
 WORKDIR /app/backend
 
-# Launch the FastAPI app using Uvicorn
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Launch the FastAPI app using Uvicorn on the dynamically assigned PORT (required for Render)
+CMD sh -c "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"

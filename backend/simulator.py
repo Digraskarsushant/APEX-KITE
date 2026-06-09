@@ -4,6 +4,7 @@ import random
 import datetime
 import threading
 import math
+import gc
 from typing import List, Dict, Any
 import yfinance as yf
 import pandas as pd
@@ -285,8 +286,8 @@ class MarketSimulator:
         thread.start()
 
     def _background_yfinance_download(self):
-        """Downloads historical data in the background and gracefully replaces mock data using batched downloads."""
-        print("Starting batch background download of real Yahoo Finance data...")
+        """Downloads historical data sequentially and gracefully replaces mock data using batched downloads to prevent OOM."""
+        print("Starting sequential batch background download of real Yahoo Finance data (Memory Optimized)...")
         now = datetime.datetime.now()
         
         # Initialize real-time exchange rates from Yahoo Finance
@@ -300,119 +301,101 @@ class MarketSimulator:
                         if latest_rate > 0:
                             self.exchange_rates[currency] = round(latest_rate, 4)
             print(f"Real-time exchange rates loaded successfully: {self.exchange_rates}")
+            del rate_tickers
+            gc.collect()
         except Exception as rate_ex:
             print(f"Failed to load real-time exchange rates on background init: {rate_ex}.")
 
         tickers_list = [info["ticker"] for symbol, info in STOCK_CONFIG.items()]
         tickers_str = " ".join(tickers_list)
 
-        try:
-            print("Batch downloading 1d candles...")
-            df_1d_batch = yf.download(tickers=tickers_str, period="1y", interval="1d", group_by="ticker", progress=False)
-            print("Batch downloading 5m candles...")
-            df_5m_batch = yf.download(tickers=tickers_str, period="5d", interval="5m", group_by="ticker", progress=False)
-            print("Batch downloading 1m candles...")
-            df_1m_batch = yf.download(tickers=tickers_str, period="5d", interval="1m", group_by="ticker", progress=False)
-            print("Batch downloading 1mo candles...")
-            df_1mo_batch = yf.download(tickers=tickers_str, period="max", interval="1mo", group_by="ticker", progress=False)
-            print("Batch downloading max weekly candles...")
-            df_max_batch = yf.download(tickers=tickers_str, period="max", interval="1wk", group_by="ticker", progress=False)
-        except Exception as e:
-            print(f"Batch yfinance download failed entirely: {e}. Keeping mock data.")
-            return
+        # Initialize empty temporary candles for all symbols
+        all_temp_candles = {symbol: {"1m": [], "5m": [], "1d": [], "1mo": [], "1y": [], "max": []} for symbol in STOCK_CONFIG.keys()}
+        success_flags = {symbol: False for symbol in STOCK_CONFIG.keys()}
 
-        is_multiindex = isinstance(df_1d_batch.columns, pd.MultiIndex)
-
-        for symbol, info in STOCK_CONFIG.items():
-            yahoo_symbol = info["ticker"]
-            success = False
-            temp_candles = { "1m": [], "5m": [], "1d": [], "1mo": [], "1y": [], "max": [] }
-            
+        # Define a helper function to sequentially process and garbage collect
+        def process_batch(period, interval, target_dict_key, tail_limit=300):
+            print(f"Batch downloading {interval} candles (limit {tail_limit})...")
             try:
-                if is_multiindex:
-                    if yahoo_symbol in df_1d_batch:
-                        df_1d = df_1d_batch[yahoo_symbol]
-                        df_5m = df_5m_batch[yahoo_symbol]
-                        df_1m = df_1m_batch[yahoo_symbol]
-                        df_1mo = df_1mo_batch[yahoo_symbol]
-                        df_max = df_max_batch[yahoo_symbol]
-                    else:
-                        raise ValueError(f"{yahoo_symbol} missing from batch")
-                else:
-                    df_1d = df_1d_batch
-                    df_5m = df_5m_batch
-                    df_1m = df_1m_batch
-                    df_1mo = df_1mo_batch
-                    df_max = df_max_batch
+                df_batch = yf.download(tickers=tickers_str, period=period, interval=interval, group_by="ticker", progress=False)
+                is_multiindex = isinstance(df_batch.columns, pd.MultiIndex)
                 
-                if not df_1d.empty:
-                    df_1d = df_1d.dropna(subset=['Close'])
-                    for idx, row in df_1d.iterrows():
-                        temp_candles["1d"].append({
-                            "time": idx.strftime("%Y-%m-%d"),
-                            "open": round(float(row['Open']), 2), "high": round(float(row['High']), 2),
-                            "low": round(float(row['Low']), 2), "close": round(float(row['Close']), 2),
-                            "volume": int(row['Volume']) if not pd.isna(row['Volume']) else 0
-                        })
-
-                    if not df_5m.empty:
-                        df_5m = df_5m.dropna(subset=['Close'])
-                        for idx, row in df_5m.iterrows():
-                            temp_candles["5m"].append({
-                                "time": idx.strftime("%Y-%m-%d %H:%M:%S"),
-                                "open": round(float(row['Open']), 2), "high": round(float(row['High']), 2),
-                                "low": round(float(row['Low']), 2), "close": round(float(row['Close']), 2),
-                                "volume": int(row['Volume']) if not pd.isna(row['Volume']) else 0
-                            })
-
-                    if not df_1m.empty:
-                        df_1m = df_1m.dropna(subset=['Close'])
-                        for idx, row in df_1m.iterrows():
-                            temp_candles["1m"].append({
-                                "time": idx.strftime("%Y-%m-%d %H:%M:%S"),
-                                "open": round(float(row['Open']), 2), "high": round(float(row['High']), 2),
-                                "low": round(float(row['Low']), 2), "close": round(float(row['Close']), 2),
-                                "volume": int(row['Volume']) if not pd.isna(row['Volume']) else 0
-                            })
-
-                    if not df_1mo.empty:
-                        df_1mo = df_1mo.dropna(subset=['Close'])
-                        for idx, row in df_1mo.iterrows():
-                            temp_candles["1mo"].append({
-                                "time": idx.strftime("%Y-%m-%d"),
-                                "open": round(float(row['Open']), 2), "high": round(float(row['High']), 2),
-                                "low": round(float(row['Low']), 2), "close": round(float(row['Close']), 2),
-                                "volume": int(row['Volume']) if not pd.isna(row['Volume']) else 0
-                            })
-
-                        df_1y = df_1mo.groupby(df_1mo.index.year).agg({'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'})
-                        for year, row in df_1y.iterrows():
-                            temp_candles["1y"].append({
-                                "time": f"{year}-01-01",
-                                "open": round(float(row['Open']), 2), "high": round(float(row['High']), 2),
-                                "low": round(float(row['Low']), 2), "close": round(float(row['Close']), 2),
-                                "volume": int(row['Volume']) if not pd.isna(row['Volume']) else 0
-                            })
-
-                    if not df_max.empty:
-                        df_max = df_max.dropna(subset=['Close'])
-                        for idx, row in df_max.iterrows():
-                            temp_candles["max"].append({
-                                "time": idx.strftime("%Y-%m-%d"),
-                                "open": round(float(row['Open']), 2), "high": round(float(row['High']), 2),
-                                "low": round(float(row['Low']), 2), "close": round(float(row['Close']), 2),
-                                "volume": int(row['Volume']) if not pd.isna(row['Volume']) else 0
-                            })
-                    
-                    if len(temp_candles["1d"]) > 0:
-                        success = True
-                        print(f"[{symbol}] Successfully mapped batched yfinance data.")
+                for symbol, info in STOCK_CONFIG.items():
+                    yahoo_symbol = info["ticker"]
+                    try:
+                        if is_multiindex and yahoo_symbol in df_batch:
+                            df_sym = df_batch[yahoo_symbol]
+                        elif not is_multiindex:
+                            df_sym = df_batch
+                        else:
+                            continue
+                            
+                        if not df_sym.empty:
+                            df_sym = df_sym.dropna(subset=['Close']).tail(tail_limit)
+                            for idx, row in df_sym.iterrows():
+                                time_str = idx.strftime("%Y-%m-%d %H:%M:%S") if interval in ["1m", "5m"] else idx.strftime("%Y-%m-%d")
+                                if target_dict_key == "1mo":
+                                    time_str = idx.strftime("%Y-%m-%d")
+                                elif target_dict_key == "max":
+                                    time_str = idx.strftime("%Y-%m-%d")
+                                
+                                all_temp_candles[symbol][target_dict_key].append({
+                                    "time": time_str,
+                                    "open": round(float(row['Open']), 2), "high": round(float(row['High']), 2),
+                                    "low": round(float(row['Low']), 2), "close": round(float(row['Close']), 2),
+                                    "volume": int(row['Volume']) if not pd.isna(row['Volume']) else 0
+                                })
+                            
+                            if target_dict_key == "1d":
+                                success_flags[symbol] = True
+                    except Exception as e:
+                        print(f"[{symbol}] Failed processing {interval}: {e}")
+                
+                del df_batch
+                gc.collect()
             except Exception as e:
-                print(f"[{symbol}] Failed to map batched yfinance data: {e}")
-            
-            if success:
+                print(f"Batch {interval} yfinance download failed: {e}")
+
+        # 1. Process 1d (Daily)
+        process_batch("1y", "1d", "1d", tail_limit=300)
+        
+        # 2. Process 5m
+        process_batch("5d", "5m", "5m", tail_limit=300)
+        
+        # 3. Process 1m
+        process_batch("5d", "1m", "1m", tail_limit=300)
+        
+        # 4. Process 1mo (Max)
+        process_batch("max", "1mo", "1mo", tail_limit=300)
+        
+        # 5. Process 1wk (Max)
+        process_batch("max", "1wk", "max", tail_limit=300)
+        
+        # Compute 1y (Yearly) from 1mo data
+        for symbol, temp_candles in all_temp_candles.items():
+            if temp_candles["1mo"]:
+                try:
+                    df_1mo = pd.DataFrame(temp_candles["1mo"])
+                    df_1mo['datetime'] = pd.to_datetime(df_1mo['time'])
+                    df_1mo.set_index('datetime', inplace=True)
+                    df_1y = df_1mo.groupby(df_1mo.index.year).agg({'open': 'first', 'high': 'max', 'low': 'min', 'close': 'last', 'volume': 'sum'})
+                    for year, row in df_1y.iterrows():
+                        temp_candles["1y"].append({
+                            "time": f"{year}-01-01",
+                            "open": round(float(row['open']), 2), "high": round(float(row['high']), 2),
+                            "low": round(float(row['low']), 2), "close": round(float(row['close']), 2),
+                            "volume": int(row['volume']) if not pd.isna(row['volume']) else 0
+                        })
+                    del df_1mo
+                    del df_1y
+                except Exception as e:
+                    pass
+
+        # Finalize
+        for symbol, info in STOCK_CONFIG.items():
+            if success_flags[symbol]:
                 self.failed_symbols.discard(symbol)
-                self.candles[symbol] = temp_candles
+                self.candles[symbol] = all_temp_candles[symbol]
                 
                 # Robustly get latest close
                 if self.candles[symbol]["1m"]:
@@ -433,15 +416,18 @@ class MarketSimulator:
                 self.current_ticks[symbol] = {
                     "symbol": symbol, "name": info["name"], "price": latest_close,
                     "change": round(change, 2), "change_percent": round(change_pct, 2),
-                    "open": daily_open, "high": max([c["high"] for c in recent_candles[-60:]]),
-                    "low": min([c["low"] for c in recent_candles[-60:]]), "close": latest_close,
-                    "volume": sum([c["volume"] for c in recent_candles[-60:]]),
+                    "open": daily_open, "high": max([c["high"] for c in recent_candles[-60:]]) if recent_candles else latest_close,
+                    "low": min([c["low"] for c in recent_candles[-60:]]) if recent_candles else latest_close,
+                    "close": latest_close,
+                    "volume": sum([c["volume"] for c in recent_candles[-60:]]) if recent_candles else 0,
                     "timestamp": now.strftime("%Y-%m-%d %H:%M:%S")
                 }
                 self.stocks[symbol] = latest_close
                 self.reference_prices[symbol] = latest_close
             else:
                 self.failed_symbols.add(symbol)
+        
+        gc.collect()
 
     def _generate_fallback_candles(self, symbol: str, info: Dict[str, Any], now: datetime.datetime):
         """Generates fallback historical candles if yfinance download fails."""

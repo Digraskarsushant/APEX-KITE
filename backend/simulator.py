@@ -233,7 +233,8 @@ class MarketSimulator:
             "INR": 1.0
         }
         self.initialize_mock_market()
-        self.start_background_init()
+        # Fetch real data synchronously on boot so users never see dummy data
+        self._background_yfinance_download()
         self.start_background_poller()
 
     def generate_random_walk(self, start_price: float, volatility: float) -> float:

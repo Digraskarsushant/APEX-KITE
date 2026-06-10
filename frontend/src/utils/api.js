@@ -1,10 +1,24 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
 
-// Base backend URL - resolved dynamically for Web vs Mobile testing (e.g. Android devices on local network)
 const getBackendUrls = () => {
+  // If deployed to Vercel, use the environment variable pointing to the Render backend
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    const apiUrl = process.env.EXPO_PUBLIC_API_URL.replace(/\/$/, ""); // remove trailing slash
+    const wsUrl = apiUrl.startsWith('https') ? apiUrl.replace('https', 'wss') : apiUrl.replace('http', 'ws');
+    return {
+      api: apiUrl,
+      ws: wsUrl
+    };
+  }
+
+  // Fallback for Render monolithic deploy (frontend served by backend)
   if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location) {
     const hostname = window.location.hostname;
+    // If running locally via Expo Web, don't point to localhost:8081 for API
+    if (hostname === 'localhost' && window.location.port === '8081') {
+      return { api: 'http://localhost:8000', ws: 'ws://localhost:8000' };
+    }
     const port = window.location.port ? `:${window.location.port}` : '';
     const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
     const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -13,6 +27,7 @@ const getBackendUrls = () => {
       ws: `${wsProtocol}://${hostname}${port}`
     };
   }
+  
   // Native mobile device connected to the same Wi-Fi network as the backend server
   return {
     api: 'http://192.168.0.22:8000',

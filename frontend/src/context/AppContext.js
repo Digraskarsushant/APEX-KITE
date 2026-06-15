@@ -388,11 +388,21 @@ export const AppProvider = ({ children }) => {
     const gbpSymbols = ['FTSE100'];
     const jpySymbols = ['NIKKEI'];
 
-    if (usdSymbols.includes(baseSymbol)) return exchangeRates.USD;
-    if (gbpSymbols.includes(baseSymbol)) return exchangeRates.GBP;
-    if (jpySymbols.includes(baseSymbol)) return exchangeRates.JPY;
+    let quoteCurrency = 'INR';
 
-    return 1.0;
+    if (usdSymbols.includes(baseSymbol)) {
+      quoteCurrency = 'USD';
+    } else if (gbpSymbols.includes(baseSymbol)) {
+      quoteCurrency = 'GBP';
+    } else if (jpySymbols.includes(baseSymbol)) {
+      quoteCurrency = 'JPY';
+    } else if (baseSymbol.length === 6) {
+      // Forex pairs are 6 characters long (e.g., EURUSD). The last 3 are the quote currency!
+      quoteCurrency = baseSymbol.substring(3, 6);
+    }
+
+    if (quoteCurrency === 'INR') return 1.0;
+    return exchangeRates[quoteCurrency] || 1.0;
   };
 
   // Auto-ticking portfolio evaluator (computes overall unrealized P&L by joining live prices)

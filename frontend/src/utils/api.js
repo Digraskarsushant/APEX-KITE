@@ -186,27 +186,18 @@ export const getCurrencySymbol = (symbol = '') => {
   const gbpSymbols = ['FTSE100'];
   const jpySymbols = ['NIKKEI'];
 
-  if (usdSymbols.includes(baseSymbol)) return '$';
-  if (gbpSymbols.includes(baseSymbol)) return '£';
-  if (jpySymbols.includes(baseSymbol)) return '¥';
+  let quoteCurrency = 'INR';
 
-  return '₹';
-};
+  if (usdSymbols.includes(baseSymbol)) quoteCurrency = 'USD';
+  else if (gbpSymbols.includes(baseSymbol)) quoteCurrency = 'GBP';
+  else if (jpySymbols.includes(baseSymbol)) quoteCurrency = 'JPY';
+  else if (baseSymbol.length === 6) quoteCurrency = baseSymbol.substring(3, 6);
 
-export const getExchangeRateToINR = (symbol = '') => {
-  if (!symbol) return 1.0;
-  const parts = symbol.split('_');
-  const baseSymbol = parts[0].toUpperCase();
+  const currencySymbols = {
+    'USD': '$', 'GBP': '£', 'JPY': '¥', 'EUR': '€', 'INR': '₹'
+  };
 
-  const usdSymbols = ['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'AMZN', 'TSLA', 'META', 'SP500', 'NASDAQ', 'DOW'];
-  const gbpSymbols = ['FTSE100'];
-  const jpySymbols = ['NIKKEI'];
-
-  if (usdSymbols.includes(baseSymbol)) return 83.5;
-  if (gbpSymbols.includes(baseSymbol)) return 106.0;
-  if (jpySymbols.includes(baseSymbol)) return 0.55;
-
-  return 1.0;
+  return currencySymbols[quoteCurrency] || `${quoteCurrency} `;
 };
 
 export { API_BASE_URL, WS_BASE_URL };

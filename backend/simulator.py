@@ -223,6 +223,15 @@ STOCK_CONFIG = {
     "EURNOK": {"name": "EUR/NOK", "ticker": "EURNOK=X", "base": 11.40, "volatility": 0.0004},
 }
 
+CURRENCY_PAIRS = [
+    ("USD", "USDINR=X"), ("GBP", "GBPINR=X"), ("JPY", "JPYINR=X"),
+    ("CHF", "CHFINR=X"), ("CAD", "CADINR=X"), ("AUD", "AUDINR=X"),
+    ("NZD", "NZDINR=X"), ("SGD", "SGDINR=X"), ("HKD", "HKDINR=X"),
+    ("ZAR", "ZARINR=X"), ("MXN", "MXNINR=X"), ("TRY", "TRYINR=X"),
+    ("SEK", "SEKINR=X"), ("NOK", "NOKINR=X"), ("DKK", "DKKINR=X"),
+    ("CNY", "CNYINR=X"), ("KRW", "KRWINR=X"), ("EUR", "EURINR=X")
+]
+
 class MarketSimulator:
     def __init__(self):
         self.stocks = {}
@@ -292,8 +301,9 @@ class MarketSimulator:
         
         # Initialize real-time exchange rates from Yahoo Finance
         try:
-            rate_tickers = yf.download(tickers="USDINR=X GBPINR=X JPYINR=X", period="1d", interval="1m", group_by="ticker", progress=False)
-            for currency, ticker in [("USD", "USDINR=X"), ("GBP", "GBPINR=X"), ("JPY", "JPYINR=X")]:
+            rate_tickers_str = " ".join([ticker for _, ticker in CURRENCY_PAIRS])
+            rate_tickers = yf.download(tickers=rate_tickers_str, period="1d", interval="1m", group_by="ticker", progress=False)
+            for currency, ticker in CURRENCY_PAIRS:
                 if ticker in rate_tickers:
                     ticker_df = rate_tickers[ticker].dropna(subset=['Close'])
                     if not ticker_df.empty:
@@ -586,7 +596,7 @@ class MarketSimulator:
     def fetch_latest_prices(self):
         """Downloads the latest ticking prices and exchange rates from Yahoo Finance in one single batched call."""
         tickers_list = [info["ticker"] for symbol, info in STOCK_CONFIG.items() if symbol not in self.failed_symbols]
-        rate_tickers = ["USDINR=X", "GBPINR=X", "JPYINR=X"]
+        rate_tickers = [ticker for _, ticker in CURRENCY_PAIRS]
         tickers_list.extend(rate_tickers)
         if not tickers_list:
             return
@@ -609,7 +619,7 @@ class MarketSimulator:
                     pass
             
             # Extract and update rates
-            for currency, ticker in [("USD", "USDINR=X"), ("GBP", "GBPINR=X"), ("JPY", "JPYINR=X")]:
+            for currency, ticker in CURRENCY_PAIRS:
                 try:
                     ticker_df = df[ticker].dropna(subset=['Close'])
                     if not ticker_df.empty:
